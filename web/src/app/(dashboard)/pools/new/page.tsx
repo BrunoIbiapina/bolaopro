@@ -472,10 +472,21 @@ export default function NewPoolPage() {
                                         { name: newTeamName.trim(), code: newTeamCode.trim() },
                                         {
                                           onSuccess: (team: any) => {
+                                            console.log('Team created successfully:', team);
+                                            if (!team.id) {
+                                              console.error('Team created but no ID returned:', team);
+                                              toast.error('Erro: Time criado mas sem ID');
+                                              return;
+                                            }
                                             setter(team.id);
                                             setNewTeamFor(null);
                                             refetchTeams();
+                                            toast.success(`${team.name} criado!`);
                                           },
+                                          onError: (error: any) => {
+                                            console.error('Error creating team:', error);
+                                            toast.error(`Erro ao criar time: ${error?.response?.data?.message || error.message}`);
+                                          }
                                         }
                                       );
                                     }}
@@ -546,8 +557,26 @@ export default function NewPoolPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={!newMatchHome || !newMatchAway || !newMatchDate || newMatchHome === newMatchAway || creatingMatch}
+                        disabled={!watchedChampionshipId || !newMatchHome || !newMatchAway || !newMatchDate || newMatchHome === newMatchAway || creatingMatch}
                         onClick={() => {
+                          // Debug: log os valores antes de enviar
+                          console.log('Creating match with:', {
+                            championshipId: watchedChampionshipId,
+                            homeTeamId: newMatchHome,
+                            awayTeamId: newMatchAway,
+                            scheduledAt: new Date(newMatchDate).toISOString(),
+                          });
+
+                          // Validação extra
+                          if (!watchedChampionshipId) {
+                            toast.error('Selecione um campeonato primeiro');
+                            return;
+                          }
+                          if (!newMatchHome || !newMatchAway) {
+                            toast.error('Selecione os dois times');
+                            return;
+                          }
+
                           createMatch(
                             {
                               championshipId: watchedChampionshipId,
