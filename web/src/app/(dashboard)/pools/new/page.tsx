@@ -97,6 +97,12 @@ export default function NewPoolPage() {
     setSelectedMatchIds([]);
   }, [watchedChampionshipId]);
 
+  // UUID validation helper
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   const toggleMatch = (id: string) => {
     // Não permite selecionar partidas encerradas
     const match = (champMatches ?? []).find((m: any) => m.id === id);
@@ -472,10 +478,20 @@ export default function NewPoolPage() {
                                         { name: newTeamName.trim(), code: newTeamCode.trim() },
                                         {
                                           onSuccess: (team: any) => {
-                                            console.log('Team created successfully:', team);
+                                            console.log('✓ Time criado:', {
+                                              name: team.name,
+                                              id: team.id,
+                                              idType: typeof team.id,
+                                              isValidUUID: team.id ? isValidUUID(team.id) : false,
+                                            });
                                             if (!team.id) {
-                                              console.error('Team created but no ID returned:', team);
+                                              console.error('✗ ERRO: Time criado mas sem ID');
                                               toast.error('Erro: Time criado mas sem ID');
+                                              return;
+                                            }
+                                            if (!isValidUUID(team.id)) {
+                                              console.error(`✗ ERRO: ID não é um UUID válido: "${team.id}"`);
+                                              toast.error(`Erro: ID do time inválido: ${team.id}`);
                                               return;
                                             }
                                             setter(team.id);
@@ -484,7 +500,11 @@ export default function NewPoolPage() {
                                             toast.success(`${team.name} criado!`);
                                           },
                                           onError: (error: any) => {
-                                            console.error('Error creating team:', error);
+                                            console.error('✗ Erro ao criar time:', {
+                                              status: error?.response?.status,
+                                              data: error?.response?.data,
+                                              message: error?.message,
+                                            });
                                             toast.error(`Erro ao criar time: ${error?.response?.data?.message || error.message}`);
                                           }
                                         }
@@ -559,44 +579,90 @@ export default function NewPoolPage() {
                         type="button"
                         disabled={!watchedChampionshipId || !newMatchHome || !newMatchAway || !newMatchDate || newMatchHome === newMatchAway || creatingMatch}
                         onClick={() => {
-                          // Debug: log os valores antes de enviar
-                          console.log('Creating match with:', {
+                          // Validação completa com mensagens descritivas
+                          console.log('=== Iniciando validação de partida ===');
+                          console.log('Valores brutos:', {
+                            watchedChampionshipId: `"${watchedChampionshipId}"`,
+                            newMatchHome: `"${newMatchHome}"`,
+                            newMatchAway: `"${newMatchAway}"`,
+                            newMatchDate: `"${newMatchDate}"`,
+                          });
+
+                          // Verificar se os valores estão vazios
+                          if (!watchedChampionshipId?.trim()) {
+                            console.error('❌ Erro: championshipId vazio');
+                            toast.error('Selecione um campeonato');
+                            return;
+                          }
+                          if (!newMatchHome?.trim()) {
+                            console.error('❌ Erro: homeTeamId vazio');
+                            toast.error('Selecione o time da casa');
+                            return;
+                          }
+                          if (!newMatchAway?.trim()) {
+                            console.error('❌ Erro: awayTeamId vazio');
+                            toast.error('Selecione o time visitante');
+                            return;
+                          }
+                          if (!newMatchDate?.trim()) {
+                            console.error('❌ Erro: scheduledAt vazio');
+                            toast.error('Selecione a data e hora');
+                            return;
+                          }
+
+                          // Validar se são UUIDs válidos
+                          const champIdValid = isValidUUID(watchedChampionshipId);
+                          const homeIdValid = isValidUUID(newMatchHome);
+                          const awayIdValid = isValidUUID(newMatchAway);
+
+                          console.log('Validação UUID:', {
+                            championshipId: champIdValid ? '✓ válido' : `✗ INVÁLIDO: "${watchedChampionshipId}"`,
+                            homeTeamId: homeIdValid ? '✓ válido' : `✗ INVÁLIDO: "${newMatchHome}"`,
+                            awayTeamId: awayIdValid ? '✓ válido' : `✗ INVÁLIDO: "${newMatchAway}"`,
+                          });
+
+                          if (!champIdValid) {
+                            toast.error(`Campeonato inválido: ${watchedChampionshipId}`);
+                            return;
+                          }
+                          if (!homeIdValid) {
+                            toast.error(`Time da casa inválido: ${newMatchHome}`);
+                            return;
+                          }
+                          if (!awayIdValid) {
+                            toast.error(`Time visitante inválido: ${newMatchAway}`);
+                            return;
+                          }
+
+                          // Se passou em todas as validações, enviar
+                          const matchData = {
                             championshipId: watchedChampionshipId,
                             homeTeamId: newMatchHome,
                             awayTeamId: newMatchAway,
                             scheduledAt: new Date(newMatchDate).toISOString(),
-                          });
+                            roundId: newMatchRound || undefined,
+                          };
 
-                          // Validação extra
-                          if (!watchedChampionshipId) {
-                            toast.error('Selecione um campeonato primeiro');
-                            return;
-                          }
-                          if (!newMatchHome || !newMatchAway) {
-                            toast.error('Selecione os dois times');
-                            return;
-                          }
+                          console.log('✓ Todas as validações passaram. Enviando:', matchData);
 
-                          createMatch(
-                            {
-                              championshipId: watchedChampionshipId,
-                              homeTeamId: newMatchHome,
-                              awayTeamId: newMatchAway,
-                              scheduledAt: new Date(newMatchDate).toISOString(),
-                              roundId: newMatchRound || undefined,
+                          createMatch(matchData, {
+                            onSuccess: (match: any) => {
+                              console.log('✓ Partida criada com sucesso:', match);
+                              setShowNewMatch(false);
+                              setNewMatchHome('');
+                              setNewMatchAway('');
+                              setNewMatchDate('');
+                              setNewMatchRound('');
+                              setSelectedMatchIds(prev => [...prev, match.id]);
                             },
-                            {
-                              onSuccess: (match: any) => {
-                                setShowNewMatch(false);
-                                setNewMatchHome('');
-                                setNewMatchAway('');
-                                setNewMatchDate('');
-                                setNewMatchRound('');
-                                // Auto-seleciona a partida recém-criada
-                                setSelectedMatchIds(prev => [...prev, match.id]);
-                              },
-                            }
-                          );
+                            onError: (err: any) => {
+                              console.error('✗ Erro ao criar partida:', {
+                                status: err?.response?.status,
+                                data: err?.response?.data,
+                                message: err?.message,
+                              });
+                            },
+                          });
                         }}
                         className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
                       >
