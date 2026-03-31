@@ -1,0 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PoolStatus {
+  OPEN
+  CLOSED
+  FINISHED
+}
+
+enum PoolMemberStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  CANCELLED
+}
+
+model User {
+  id                           String   @id @default(cuid())
+  email                        String   @unique
+  password                     String?  // opcional para usuários que entram via Google
+  googleId                     String?  @unique
+  fullName                     String
+  avatar                       String?
+  bio                          String?
+  role                         UserRole @default(USER)
+  emailVerifiedAt              DateTime?
+  emailVerificationToken       String?
+  passwordResetToken           String?
+  passwordResetTokenExpiresAt  DateTime?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  pools              Pool[]          @relation("organizer")
+  poolMembers        PoolMember[]
+  predictions        Prediction[]
+  payments           Payment[]
+  notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Championship {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  matches Match[]
+  pools   Pool[]
+
+  @@index([code])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  logo      String?
+  country   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  homeMatches Match[] @relation("homeTeam")
+  awayMatches Match[] @relation("awayTeam")
+
+  @@index([code])
+}
+
+model Match {
+  id                  String   @id @default(cuid())
+  championshipId      String
+  championship        Championship @relation(fields: [championshipId], references: [id], onDelete: Cascade)
+  homeTeamId          String
+  homeTeam            Team     @relation("homeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId          String
+  awayTeam            Team     @relation("awayTeam", fields: [awayTeamId], references: [id])
+  roundId             String?
+  scheduledAt         DateTime
+  status              MatchStatus @default(SCHEDULED)
+  homeScoreResult     Int?
+  awayScoreResult     Int?
+  knockoutWinnerId    String?
+  externalId          String?  @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  predictions         Prediction[]
+  poolMatches         PoolMatch[]
+
+  @@index([championshipId])
+  @@index([scheduledAt])
+  @@index([roundId])
+}
+
+model Pool {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  organizerId       String
+  organizer         User     @relation("organizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  championshipId    String
+  championship      Championship @relation(fields: [championshipId], references: [id])
+  inviteCode            String   @unique
+  entryFee              Float    @default(0)
+  maxParticipants       Int
+  cotasPerParticipant   Int      @default(1)
+  status                PoolStatus @default(OPEN)
+  rules                 String?
+  pixKey                String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  members            PoolMember[]
+  predictions        Prediction[]
+  payments           Payment[]
+  notifications      Notification[]
+  poolMatches        PoolMatch[]
+
+  @@index([organizerId])
+  @@index([championshipId])
+  @@index([inviteCode])
+  @@index([createdAt])
+}
+
+model PoolMatch {
+  poolId    String
+  matchId   String
+  pool      Pool   @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([poolId, matchId])
+  @@index([poolId])
+  @@index([matchId])
+}
+
+model PoolMember {
+  poolId       String
+  pool         Pool             @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       PoolMemberStatus @default(PENDING)
+  numCotas     Int              @default(1)
+  joinedAt     DateTime         @default(now())
+  // Campos de apuração de prêmio
+  prizePaidAt  DateTime?        @map("prize_paid_at")
+  prizeAmount  Float?           @map("prize_amount")
+
+  @@id([poolId, userId])
+  @@index([userId])
+  @@map("pool_members")
+}
+
+model Prediction {
+  id              String   @id @default(cuid())
+  poolId          String
+  pool            Pool     @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matchId         String
+  match           Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  homeScore        Int
+  awayScore        Int
+  knockoutWinnerId String?
+  cotaIndex        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId, matchId, poolId, cotaIndex])
+  @@index([poolId])
+  @@index([userId])
+  @@index([matchId])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  poolId        String
+  pool          Pool     @relation(fields: [poolId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount          Float
+  status          PaymentStatus @default(PENDING)
+  transactionId   String?  @unique
+  pixPayload      String?
+  paymentProofUrl String?
+  paidAt          DateTime?
+  userNotifiedAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([poolId, userId])
+  @@index([poolId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  poolId    String?
+  pool      Pool?    @relation(fields: [poolId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  type      String   @default("INFO")
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  oldData    String?
+  newData    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+}
