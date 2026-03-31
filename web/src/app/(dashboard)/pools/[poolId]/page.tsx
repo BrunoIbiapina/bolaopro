@@ -476,7 +476,7 @@ function LiveDashboard({ poolId, userId }: { poolId: string; userId: string }) {
 // ─── Final Result Banner ──────────────────────────────────────────────────────
 function FinalResultBanner({ poolId, userId }: { poolId: string; userId: string }) {
   const { data: rankingData } = useRanking(poolId);
-  const { data: members } = usePoolMembers(poolId);
+  usePoolMembers(poolId);
 
   if (!rankingData) return null;
 
