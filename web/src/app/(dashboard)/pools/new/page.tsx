@@ -97,6 +97,29 @@ export default function NewPoolPage() {
     setSelectedMatchIds([]);
   }, [watchedChampionshipId]);
 
+  // Debug: Log teams when they load
+  useEffect(() => {
+    if (teams && teams.length > 0) {
+      console.log('✓ Times carregados:', teams.map(t => ({
+        name: t.name,
+        id: t.id,
+        isValidUUID: isValidUUID(t.id),
+      })));
+    } else if (teams?.length === 0) {
+      console.warn('⚠ Nenhum time carregado');
+    }
+  }, [teams]);
+
+  // Debug: Log championship selection
+  useEffect(() => {
+    if (watchedChampionshipId) {
+      console.log(`✓ Campeonato selecionado:`, {
+        id: watchedChampionshipId,
+        isValidUUID: isValidUUID(watchedChampionshipId),
+      });
+    }
+  }, [watchedChampionshipId]);
+
   // UUID validation helper
   const isValidUUID = (uuid: string): boolean => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
