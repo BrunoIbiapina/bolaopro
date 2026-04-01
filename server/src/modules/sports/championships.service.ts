@@ -1,22 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChampionshipDto } from './dto/create-championship.dto';
 import { UpdateChampionshipDto } from './dto/update-championship.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChampionshipsService {
   constructor(private prisma: PrismaService) {}
 
   async createChampionship(createChampionshipDto: CreateChampionshipDto) {
-    return this.prisma.championship.create({
-      data: {
-        name: createChampionshipDto.name,
-        code: createChampionshipDto.code,
-        description: createChampionshipDto.description,
-        startDate: createChampionshipDto.startDate,
-        endDate: createChampionshipDto.endDate,
-      },
-    });
+    try {
+      return await this.prisma.championship.create({
+        data: {
+          name: createChampionshipDto.name,
+          code: createChampionshipDto.code,
+          description: createChampionshipDto.description,
+          startDate: createChampionshipDto.startDate,
+          endDate: createChampionshipDto.endDate,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('Já existe um campeonato com esse código');
+      }
+      throw err;
+    }
   }
 
   async getAllChampionships() {
