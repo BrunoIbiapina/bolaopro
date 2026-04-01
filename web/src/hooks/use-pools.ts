@@ -145,6 +145,7 @@ export function useUpdatePool() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['pools', data.id] });
       queryClient.invalidateQueries({ queryKey: ['pools'] });
+      queryClient.invalidateQueries({ queryKey: ['payment', data.id] });
       toast.success('Bolão atualizado!');
     },
     onError: () => {

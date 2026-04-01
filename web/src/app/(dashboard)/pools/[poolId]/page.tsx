@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
-import { usePool, usePoolMembers, useLeavePool, usePrizeInfo, useDeletePool, useUpdateMemberStatus } from '@/hooks/use-pools';
+import { usePool, usePoolMembers, useLeavePool, usePrizeInfo, useDeletePool, useUpdateMemberStatus, useUpdatePool } from '@/hooks/use-pools';
 import { usePredictions, useSavePredictions, useGroupPredictions, useCancelPredictions } from '@/hooks/use-predictions';
 import { usePaymentStatus, useGeneratePayment, useUploadPaymentProof, useNotifyPaymentSent } from '@/hooks/use-payments';
 import { usePoolMatches } from '@/hooks/use-matches';
@@ -11,6 +11,7 @@ import { useRanking } from '@/hooks/use-ranking';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { CardSkeleton } from '@/components/shared/loading-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { AvatarWithInitials } from '@/components/ui/avatar';
@@ -1259,11 +1260,13 @@ function PaymentTab({
   const { mutate: leave, isPending: leaving } = useLeavePool();
   const { mutate: deletePool, isPending: deleting } = useDeletePool();
   const { mutate: updateMember, isPending: confirmingOwn } = useUpdateMemberStatus();
+  const { mutate: updatePool, isPending: savingPixKey } = useUpdatePool();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pixData, setPixData] = useState<{ payload: string; qr: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [notified, setNotified] = useState(false);
+  const [pixKeyInput, setPixKeyInput] = useState('');
 
   if (isLoading) return <CardSkeleton />;
   if (!payment) return null;
@@ -1391,8 +1394,51 @@ function PaymentTab({
                 </div>
               )}
 
+              {/* PIX não configurado — organizador pode configurar */}
+              {!payment.hasPixKey && !isPaid && isOrganizer && (
+                <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 space-y-3">
+                  <div className="flex items-start gap-2.5">
+                    <Banknote className="h-4 w-4 text-yellow-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-300">Configure sua chave PIX</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Informe sua chave PIX para que os participantes possam pagar a entrada do bolão.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={pixKeyInput}
+                      onChange={(e) => setPixKeyInput(e.target.value)}
+                      placeholder="CPF, email, celular ou chave aleatória"
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      disabled={!pixKeyInput.trim() || savingPixKey}
+                      onClick={() => updatePool({ poolId, data: { pixKey: pixKeyInput.trim() } as any }, {
+                        onSuccess: () => setPixKeyInput(''),
+                      })}
+                    >
+                      {savingPixKey ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* PIX não configurado — aviso para participantes */}
+              {!payment.hasPixKey && !isPaid && !isOrganizer && (
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <AlertTriangle className="h-4 w-4 text-yellow-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-yellow-300">Pagamento não disponível</p>
+                    <p className="text-xs text-gray-400 mt-0.5">O organizador ainda não configurou a chave PIX. Aguarde ou entre em contato.</p>
+                  </div>
+                </div>
+              )}
+
               {/* Botão para solicitar / exibir PIX */}
-              {!isOrganizer && !isPaid && payment.paymentStatus === 'NOT_REQUESTED' && (
+              {!isOrganizer && !isPaid && payment.hasPixKey && payment.paymentStatus === 'NOT_REQUESTED' && (
                 <Button className="w-full" onClick={handleGenerate} disabled={generating}>
                   {generating
                     ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Gerando...</>

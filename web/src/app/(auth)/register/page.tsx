@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { User, Mail, Lock, ArrowRight, Banknote, Info } from 'lucide-react';
+import { User, Mail, Lock, ArrowRight } from 'lucide-react';
 import { PageLoader } from '@/components/shared/page-loader';
 
 const registerSchema = z
@@ -19,7 +19,6 @@ const registerSchema = z
     email: z.string().email('Email inválido'),
     password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
     confirmPassword: z.string(),
-    pixKey: z.string().min(5, 'Informe sua chave PIX para poder receber prêmios'),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: 'Você deve aceitar os termos e condições',
     }),
@@ -48,7 +47,6 @@ function RegisterContent() {
       email: '',
       password: '',
       confirmPassword: '',
-      pixKey: '',
       acceptTerms: false,
     },
   });
@@ -56,7 +54,7 @@ function RegisterContent() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      await register(data.fullName, data.email, data.password, data.pixKey);
+      await register(data.fullName, data.email, data.password);
       toast.success('Conta criada com sucesso!');
       router.push(redirect ?? '/');
     } catch (error: any) {
@@ -144,32 +142,6 @@ function RegisterContent() {
           </div>
           {form.formState.errors.confirmPassword && (
             <p className="text-xs text-red-400 mt-1">{form.formState.errors.confirmPassword.message}</p>
-          )}
-        </div>
-
-        {/* PIX Key */}
-        <div>
-          <label className="text-sm font-medium text-gray-50 block mb-2">
-            Chave PIX <span className="text-red-400 font-normal">*</span>
-          </label>
-          <div className="relative">
-            <Banknote className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
-            <Input
-              type="text"
-              placeholder="CPF, email, celular ou chave aleatória"
-              {...form.register('pixKey')}
-              className="pl-10"
-              disabled={isLoading}
-            />
-          </div>
-          <div className="flex items-start gap-1.5 mt-1.5">
-            <Info className="size-3 text-brand-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-gray-400">
-              Obrigatório para receber prêmios quando ganhar um bolão.
-            </p>
-          </div>
-          {form.formState.errors.pixKey && (
-            <p className="text-xs text-red-400 mt-1">{form.formState.errors.pixKey.message}</p>
           )}
         </div>
 

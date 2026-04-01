@@ -263,6 +263,7 @@ export class PoolsService {
           maxParticipants: updatePoolDto.maxParticipants,
         }),
         ...(updatePoolDto.rules && { rules: updatePoolDto.rules }),
+        ...(updatePoolDto.pixKey !== undefined && { pixKey: updatePoolDto.pixKey || null }),
       },
       include: {
         championship: true,
