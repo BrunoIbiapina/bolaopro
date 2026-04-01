@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, IsNotEmpty } from 'class-validator';
 
 export class CreatePoolDto {
   @IsString()
@@ -8,7 +8,8 @@ export class CreatePoolDto {
   @IsString()
   description?: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   championshipId!: string;
 
   @IsNumber()

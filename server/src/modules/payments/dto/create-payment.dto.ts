@@ -1,7 +1,8 @@
-import { IsNumber, IsUUID, Min } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, Min } from 'class-validator';
 
 export class CreatePaymentDto {
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   poolId!: string;
 
   @IsNumber()

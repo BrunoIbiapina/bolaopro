@@ -1,8 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsUUID, IsOptional, Min, ValidateNested, IsArray } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, IsOptional, Min, ValidateNested, IsArray } from 'class-validator';
 
 export class PredictionItemDto {
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   matchId!: string;
 
   @IsNumber()
@@ -14,7 +15,7 @@ export class PredictionItemDto {
   awayScore!: number;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   knockoutWinnerId?: string;
 
   @IsOptional()

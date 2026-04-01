@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class RegisterMatchResultDto {
   @IsNumber()
@@ -10,6 +10,6 @@ export class RegisterMatchResultDto {
   awayScore!: number;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   knockoutWinnerId?: string;
 }

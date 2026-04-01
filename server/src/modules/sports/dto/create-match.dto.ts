@@ -1,14 +1,17 @@
-import { IsUUID, IsDate, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsOptional, IsString, IsNotEmpty } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateMatchDto {
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   championshipId!: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   homeTeamId!: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   awayTeamId!: string;
 
   @Type(() => Date)
