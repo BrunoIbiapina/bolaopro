@@ -8,14 +8,35 @@
 :root {
   --font-inter: 'Inter', sans-serif;
   --font-jetbrains-mono: 'JetBrains Mono', monospace;
+
+  /* Light mode */
+  --color-background: #f0f4f8;
+  --color-surface: #ffffff;
+  --color-surface-light: #e8edf2;
+  --color-surface-lighter: #d1dae4;
+  --color-foreground: #111827;
+  --color-muted: #6b7280;
+}
+
+.dark {
+  --color-background: #0A0F1C;
+  --color-surface: #111827;
+  --color-surface-light: #1F2937;
+  --color-surface-lighter: #374151;
+  --color-foreground: #f9fafb;
+  --color-muted: #9ca3af;
 }
 
 html {
   @apply bg-background text-gray-50;
 }
 
+html.light {
+  @apply text-gray-900;
+}
+
 body {
-  @apply bg-background text-gray-50 font-sans;
+  @apply bg-background font-sans;
 }
 
 * {

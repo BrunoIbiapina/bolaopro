@@ -23,11 +23,13 @@ const config: Config = {
           900: '#145231',
         },
         surface: {
-          DEFAULT: '#111827',
-          light: '#1F2937',
-          lighter: '#374151',
+          DEFAULT: 'var(--color-surface)',
+          light: 'var(--color-surface-light)',
+          lighter: 'var(--color-surface-lighter)',
         },
-        background: '#0A0F1C',
+        background: 'var(--color-background)',
+        foreground: 'var(--color-foreground)',
+        muted: 'var(--color-muted)',
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],

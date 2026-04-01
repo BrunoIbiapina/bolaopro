@@ -4,14 +4,26 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTheme } from 'next-themes';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AvatarWithInitials } from '@/components/ui/avatar';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { User, Lock, LogOut } from 'lucide-react';
+import {
+  User,
+  Lock,
+  LogOut,
+  Sun,
+  Moon,
+  Pencil,
+  Shield,
+  Phone,
+  Mail,
+  Check,
+  X,
+} from 'lucide-react';
 
 const profileSchema = z.object({
   fullName: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
@@ -33,6 +45,48 @@ const passwordSchema = z
 
 type ProfileForm = z.infer<typeof profileSchema>;
 type PasswordForm = z.infer<typeof passwordSchema>;
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === 'dark';
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-700 dark:border-gray-700 light:border-gray-200 bg-surface-light hover:bg-surface-lighter transition-all duration-200 text-sm font-medium text-gray-300 dark:text-gray-300"
+      title={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+    >
+      {isDark ? (
+        <>
+          <Sun className="w-4 h-4 text-yellow-400" />
+          <span className="text-gray-300">Claro</span>
+        </>
+      ) : (
+        <>
+          <Moon className="w-4 h-4 text-brand-400" />
+          <span className="text-gray-600">Escuro</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+function InfoRow({ label, value, icon: Icon }: { label: string; value?: string; icon?: React.ElementType }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-start gap-3 py-3 border-b border-surface-light last:border-0">
+      {Icon && (
+        <div className="w-8 h-8 rounded-lg bg-brand-600/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Icon className="w-4 h-4 text-brand-400" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+        <p className="text-sm text-gray-100 dark:text-gray-100 font-medium truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
@@ -65,9 +119,7 @@ export default function ProfilePage() {
       toast.success('Perfil atualizado com sucesso!');
       setIsEditingProfile(false);
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || 'Erro ao atualizar perfil'
-      );
+      toast.error(error?.response?.data?.message || 'Erro ao atualizar perfil');
     }
   };
 
@@ -81,230 +133,249 @@ export default function ProfilePage() {
       passwordForm.reset();
       setIsEditingPassword(false);
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || 'Erro ao alterar senha'
-      );
+      toast.error(error?.response?.data?.message || 'Erro ao alterar senha');
     }
   };
 
+  const roleLabel = user?.role === 'ADMIN' ? 'Administrador' : 'Participante';
+  const roleBg = user?.role === 'ADMIN'
+    ? 'bg-purple-500/15 text-purple-300 border border-purple-500/20'
+    : 'bg-brand-600/15 text-brand-300 border border-brand-500/20';
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-50">Perfil</h1>
-        <p className="text-gray-400 mt-1">
-          Gerencie suas informações pessoais e preferências
-        </p>
+    <div className="max-w-xl mx-auto space-y-5 pb-8">
+
+      {/* Top bar: title + theme toggle */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-50">Meu Perfil</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Informações e preferências da conta</p>
+        </div>
+        <ThemeToggle />
       </div>
 
-      {/* Avatar */}
-      <Card>
-        <CardContent className="p-6 flex items-center gap-4">
-          <AvatarWithInitials
-            name={user?.fullName || 'User'}
-            src={user?.avatarUrl}
-          />
-          <div>
-            <h3 className="font-semibold text-gray-50">{user?.fullName}</h3>
-            <p className="text-sm text-gray-400">{user?.email}</p>
+      {/* Hero Card */}
+      <div className="rounded-2xl bg-gradient-to-br from-brand-700/30 via-surface to-surface border border-surface-light overflow-hidden">
+        <div className="h-20 bg-gradient-to-r from-brand-800/40 to-brand-600/20" />
+        <div className="px-6 pb-6 -mt-10">
+          <div className="flex items-end gap-4">
+            <div className="ring-4 ring-surface rounded-2xl">
+              <AvatarWithInitials
+                name={user?.fullName || 'User'}
+                src={user?.avatarUrl}
+                className="w-16 h-16 text-xl rounded-2xl"
+              />
+            </div>
+            <div className="pb-1 flex-1 min-w-0">
+              <h2 className="text-xl font-bold text-gray-50 truncate">{user?.fullName}</h2>
+              <p className="text-sm text-gray-400 truncate">{user?.email}</p>
+            </div>
+            <span className={`mb-1 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${roleBg}`}>
+              {roleLabel}
+            </span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Profile Form */}
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Informações Pessoais
-          </CardTitle>
+      {/* Personal Info Section */}
+      <div className="rounded-2xl bg-surface border border-surface-light overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-light">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-brand-600/15 flex items-center justify-center">
+              <User className="w-4 h-4 text-brand-400" />
+            </div>
+            <span className="font-semibold text-gray-100">Informações Pessoais</span>
+          </div>
           {!isEditingProfile && (
-            <Button
-              variant="secondary"
-              size="sm"
+            <button
               onClick={() => setIsEditingProfile(true)}
+              className="flex items-center gap-1.5 text-sm text-brand-400 hover:text-brand-300 transition-colors font-medium"
             >
+              <Pencil className="w-3.5 h-3.5" />
               Editar
-            </Button>
+            </button>
           )}
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        <div className="px-5 py-2">
           {isEditingProfile ? (
-            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+            <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4 py-3">
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Nome Completo
-                </label>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Nome Completo</label>
                 <Input
                   {...profileForm.register('fullName')}
                   disabled={profileForm.formState.isSubmitting}
                 />
+                {profileForm.formState.errors.fullName && (
+                  <p className="text-xs text-red-400 mt-1">{profileForm.formState.errors.fullName.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  {...profileForm.register('email')}
-                  disabled
-                />
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Email</label>
+                <Input type="email" {...profileForm.register('email')} disabled className="opacity-60 cursor-not-allowed" />
+                <p className="text-xs text-gray-500 mt-1">O email não pode ser alterado</p>
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Telefone
-                </label>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Telefone</label>
                 <Input
                   {...profileForm.register('phone')}
-                  placeholder="(11) 9999-9999"
+                  placeholder="(11) 9 9999-9999"
                   disabled={profileForm.formState.isSubmitting}
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Chave PIX
-                </label>
-                <Input
-                  {...profileForm.register('pixKey')}
-                  placeholder="seu@email.com"
-                  disabled={profileForm.formState.isSubmitting}
-                />
-              </div>
-
-              <div className="flex gap-3">
+              <div className="flex gap-2 pt-1">
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setIsEditingProfile(false)}
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setIsEditingProfile(false);
+                    profileForm.reset();
+                  }}
                   disabled={profileForm.formState.isSubmitting}
                 >
+                  <X className="w-3.5 h-3.5" />
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
+                  size="sm"
+                  className="gap-1.5"
                   disabled={profileForm.formState.isSubmitting}
                 >
-                  Salvar
+                  <Check className="w-3.5 h-3.5" />
+                  {profileForm.formState.isSubmitting ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
             </form>
           ) : (
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs text-gray-400">Nome</p>
-                <p className="text-gray-50">{user?.fullName}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">Email</p>
-                <p className="text-gray-50">{user?.email}</p>
-              </div>
-              {user?.phone && (
-                <div>
-                  <p className="text-xs text-gray-400">Telefone</p>
-                  <p className="text-gray-50">{user.phone}</p>
-                </div>
-              )}
-              {user?.pixKey && (
-                <div>
-                  <p className="text-xs text-gray-400">Chave PIX</p>
-                  <p className="text-gray-50">{user.pixKey}</p>
+            <div>
+              <InfoRow label="Nome Completo" value={user?.fullName} icon={User} />
+              <InfoRow label="Email" value={user?.email} icon={Mail} />
+              {user?.phone ? (
+                <InfoRow label="Telefone" value={user.phone} icon={Phone} />
+              ) : (
+                <div className="py-3 border-b border-surface-light last:border-0">
+                  <p className="text-xs text-gray-400 mb-0.5">Telefone</p>
+                  <p className="text-sm text-gray-500 italic">Não informado</p>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Change Password */}
-      <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Segurança
-          </CardTitle>
+      {/* Security Section */}
+      <div className="rounded-2xl bg-surface border border-surface-light overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-light">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-brand-600/15 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-brand-400" />
+            </div>
+            <span className="font-semibold text-gray-100">Segurança</span>
+          </div>
           {!isEditingPassword && (
-            <Button
-              variant="secondary"
-              size="sm"
+            <button
               onClick={() => setIsEditingPassword(true)}
+              className="flex items-center gap-1.5 text-sm text-brand-400 hover:text-brand-300 transition-colors font-medium"
             >
-              Alterar Senha
-            </Button>
+              <Lock className="w-3.5 h-3.5" />
+              Alterar senha
+            </button>
           )}
-        </CardHeader>
-        <CardContent>
+        </div>
+
+        <div className="px-5 py-2">
           {isEditingPassword ? (
-            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4 py-3">
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Senha Atual
-                </label>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Senha Atual</label>
                 <Input
                   type="password"
                   {...passwordForm.register('currentPassword')}
                   disabled={passwordForm.formState.isSubmitting}
                 />
+                {passwordForm.formState.errors.currentPassword && (
+                  <p className="text-xs text-red-400 mt-1">{passwordForm.formState.errors.currentPassword.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Nova Senha
-                </label>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Nova Senha</label>
                 <Input
                   type="password"
                   {...passwordForm.register('newPassword')}
                   disabled={passwordForm.formState.isSubmitting}
                 />
+                {passwordForm.formState.errors.newPassword && (
+                  <p className="text-xs text-red-400 mt-1">{passwordForm.formState.errors.newPassword.message}</p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-50 block mb-2">
-                  Confirme a Senha
-                </label>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Confirme a Nova Senha</label>
                 <Input
                   type="password"
                   {...passwordForm.register('confirmPassword')}
                   disabled={passwordForm.formState.isSubmitting}
                 />
+                {passwordForm.formState.errors.confirmPassword && (
+                  <p className="text-xs text-red-400 mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>
+                )}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2 pt-1">
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setIsEditingPassword(false)}
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setIsEditingPassword(false);
+                    passwordForm.reset();
+                  }}
                   disabled={passwordForm.formState.isSubmitting}
                 >
+                  <X className="w-3.5 h-3.5" />
                   Cancelar
                 </Button>
                 <Button
                   type="submit"
+                  size="sm"
+                  className="gap-1.5"
                   disabled={passwordForm.formState.isSubmitting}
                 >
-                  Alterar
+                  <Check className="w-3.5 h-3.5" />
+                  {passwordForm.formState.isSubmitting ? 'Alterando...' : 'Alterar Senha'}
                 </Button>
               </div>
             </form>
           ) : (
-            <p className="text-sm text-gray-400">
-              Última alteração: nunca
-            </p>
+            <div className="py-4 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gray-700/40 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-4 h-4 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-100 font-medium">Senha</p>
+                <p className="text-xs text-gray-500">••••••••••••</p>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Logout */}
-      <Button
-        variant="destructive"
-        className="w-full gap-2"
+      <button
         onClick={logout}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 hover:text-red-300 font-medium transition-all duration-200 text-sm"
       >
         <LogOut className="w-4 h-4" />
-        Sair
-      </Button>
+        Sair da conta
+      </button>
     </div>
   );
 }
