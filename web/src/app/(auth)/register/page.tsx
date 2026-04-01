@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { User, Mail, Lock, ArrowRight, Banknote, Info } from 'lucide-react';
+import { PageLoader } from '@/components/shared/page-loader';
 
 const registerSchema = z
   .object({
@@ -38,6 +39,7 @@ function RegisterContent() {
   const redirect = searchParams.get('redirect');
   const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -67,6 +69,7 @@ function RegisterContent() {
   };
 
   return (
+    <>
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-bold text-gray-50">Criar conta</h1>
@@ -218,9 +221,15 @@ function RegisterContent() {
       </div>
 
       {/* Botão Google */}
-      <a
-        href={`${API_URL}/auth/google${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
-        className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-gray-700 bg-white/5 hover:bg-white/10 text-gray-200 font-medium text-sm transition-colors"
+      <button
+        type="button"
+        disabled={isGoogleLoading || isLoading}
+        onClick={() => {
+          setIsGoogleLoading(true);
+          const url = `${API_URL}/auth/google${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`;
+          window.location.href = url;
+        }}
+        className="flex items-center justify-center gap-3 w-full py-3 rounded-xl border border-gray-700 bg-white/5 hover:bg-white/10 text-gray-200 font-medium text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
       >
         <svg viewBox="0 0 24 24" className="size-5" xmlns="http://www.w3.org/2000/svg">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -229,8 +238,16 @@ function RegisterContent() {
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
         </svg>
         Continuar com Google
-      </a>
+      </button>
     </div>
+
+    {isGoogleLoading && (
+      <PageLoader
+        message="Redirecionando para o Google..."
+        submessage="Aguarde um momento"
+      />
+    )}
+  </>
   );
 }
 

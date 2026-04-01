@@ -53,11 +53,40 @@ const config: Config = {
           '80%': { width: '90%', opacity: '1' },
           '100%': { width: '100%', opacity: '0.6' },
         },
+        // Bola rolando: gira 360° enquanto oscila para os lados
+        'ball-spin': {
+          '0%':   { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
+        'ball-roll': {
+          '0%':   { transform: 'translateX(-28px) rotate(0deg)' },
+          '50%':  { transform: 'translateX(28px)  rotate(360deg)' },
+          '100%': { transform: 'translateX(-28px) rotate(720deg)' },
+        },
+        'nav-bar': {
+          '0%':   { width: '0%',   opacity: '1' },
+          '50%':  { width: '70%',  opacity: '1' },
+          '90%':  { width: '95%',  opacity: '1' },
+          '100%': { width: '100%', opacity: '0' },
+        },
+        'fade-in': {
+          '0%':   { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%':   { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
       },
       animation: {
         shimmer: 'shimmer 2s infinite',
         confetti: 'confetti 2.5s ease-out forwards',
         progress: 'progress 4s ease-in-out forwards',
+        'ball-spin': 'ball-spin 0.7s linear infinite',
+        'ball-roll': 'ball-roll 1.2s ease-in-out infinite',
+        'nav-bar':   'nav-bar 3s ease-in-out forwards',
+        'fade-in':   'fade-in 0.2s ease-out forwards',
+        'fade-out':  'fade-out 0.2s ease-in forwards',
       },
     },
   },
