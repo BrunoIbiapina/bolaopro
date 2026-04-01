@@ -48,10 +48,16 @@ const config: Config = {
             transform: 'translateY(500px) rotate(360deg)',
           },
         },
+        'progress': {
+          '0%': { width: '0%', opacity: '1' },
+          '80%': { width: '90%', opacity: '1' },
+          '100%': { width: '100%', opacity: '0.6' },
+        },
       },
       animation: {
         shimmer: 'shimmer 2s infinite',
         confetti: 'confetti 2.5s ease-out forwards',
+        progress: 'progress 4s ease-in-out forwards',
       },
     },
   },
