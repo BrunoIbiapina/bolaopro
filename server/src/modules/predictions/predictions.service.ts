@@ -102,8 +102,9 @@ export class PredictionsService {
       where: { poolId_userId: { poolId, userId } },
     });
 
+    // Não-membro (ex: admin) → retorna lista vazia
     if (!member) {
-      throw new ForbiddenException('Você não é membro deste bolão');
+      return [];
     }
 
     const predictions = await this.prisma.prediction.findMany({
@@ -130,8 +131,9 @@ export class PredictionsService {
       where: { poolId_userId: { poolId, userId } },
     });
 
+    // Não-membro (ex: admin) → retorna lista vazia
     if (!member) {
-      throw new ForbiddenException('Você não é membro deste bolão');
+      return [];
     }
 
     const predictions = await this.prisma.prediction.findMany({
@@ -153,7 +155,16 @@ export class PredictionsService {
     const member = await this.prisma.poolMember.findUnique({
       where: { poolId_userId: { poolId, userId: requestingUserId } },
     });
-    if (!member) throw new ForbiddenException('Você não é membro deste bolão');
+
+    // Não-membro (ex: admin) → retorna estrutura vazia
+    if (!member) {
+      // Verificar se é admin
+      const user = await this.prisma.user.findUnique({ where: { id: requestingUserId }, select: { role: true } });
+      if (user?.role !== 'ADMIN') {
+        throw new ForbiddenException('Você não é membro deste bolão');
+      }
+      // Admin pode ver — continua normalmente com member = null
+    }
 
     // IDs dos membros confirmados
     const confirmedMembers = await this.prisma.poolMember.findMany({
@@ -206,7 +217,7 @@ export class PredictionsService {
     }
 
     return {
-      myStatus: member.status,
+      myStatus: member?.status ?? 'ADMIN',
       confirmedCount: confirmedMembers.length,
       matches: Object.values(matchMap).sort(
         (a, b) => new Date(a.match.scheduledAt).getTime() - new Date(b.match.scheduledAt).getTime()
