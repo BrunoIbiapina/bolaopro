@@ -214,18 +214,18 @@ export default function PoolsPage() {
     <div className="space-y-6">
       {showJoinModal && <JoinModal onClose={() => setShowJoinModal(false)} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-50">Bolões</h1>
           <p className="text-gray-400 mt-1">Seus bolões e disponíveis para entrar</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowJoinModal(true)}>
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowJoinModal(true)}>
             <Search className="w-4 h-4 mr-2" />
             Código de convite
           </Button>
-          <Link href="/pools/new">
-            <Button>
+          <Link href="/pools/new" className="flex-1 sm:flex-none">
+            <Button className="w-full">
               <Plus className="w-4 h-4 mr-2" />
               Criar Bolão
             </Button>
