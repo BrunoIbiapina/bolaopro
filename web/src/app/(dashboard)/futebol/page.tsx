@@ -97,7 +97,7 @@ function MatchCard({ match }: { match: FdMatch }) {
 
 // ── Matches Tab ───────────────────────────────────────────────────────────────
 function MatchesSection({ code }: { code: string }) {
-  const { data: matches, isLoading, error } = usePublicMatches(code);
+  const { data: matches, isLoading, error, isFetching } = usePublicMatches(code);
 
   if (isLoading) return (
     <div className="flex justify-center py-12">
@@ -113,7 +113,7 @@ function MatchesSection({ code }: { code: string }) {
     </div>
   );
 
-  if (matches.length === 0) return (
+  if (matches.length === 0 && !isFetching) return (
     <div className="text-center py-12">
       <CalendarDays className="w-10 h-10 text-gray-600 mx-auto mb-3" />
       <p className="text-sm text-gray-400">Nenhuma partida nos próximos 7 dias.</p>
@@ -130,6 +130,13 @@ function MatchesSection({ code }: { code: string }) {
 
   return (
     <div className="space-y-5">
+      {/* Indicador de sincronização */}
+      {isFetching && (
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          Atualizando...
+        </div>
+      )}
       {Object.entries(groups).map(([label, group]) => (
         <div key={label}>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>

@@ -85,7 +85,9 @@ export function usePublicMatches(code: string) {
       return response.data;
     },
     enabled: !!code,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60,        // 1 min
+    refetchInterval: 1000 * 60,  // re-busca a cada 60s automaticamente
+    refetchIntervalInBackground: false, // pausa se a aba estiver em background
   });
 }
 
