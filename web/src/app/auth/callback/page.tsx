@@ -26,19 +26,24 @@ function AuthCallbackContent() {
     // Salva os tokens nos cookies
     setTokens(token, refresh);
 
-    // Busca dados do usuário para popular o contexto
+    // Normaliza o redirect (evita string 'null' ou caminhos inválidos)
+    const redirectTo = (!redirect || redirect === 'null' || redirect === 'undefined') ? '/' : redirect;
+
+    // Valida o token antes de redirecionar
     api.get('/users/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(() => {
         setStatus('success');
-        // Pequeno delay para o toast/animação aparecer
-        setTimeout(() => router.push(redirect), 800);
+        // Usa window.location.href para forçar reload completo da página.
+        // Isso garante que o AuthProvider remonta e re-executa checkAuth()
+        // com o cookie já salvo — evita race condition de SPA navigation.
+        setTimeout(() => { window.location.href = redirectTo; }, 800);
       })
       .catch(() => {
         // Mesmo com erro ao buscar /me, os tokens estão salvos — redireciona assim mesmo
         setStatus('success');
-        setTimeout(() => router.push(redirect), 800);
+        setTimeout(() => { window.location.href = redirectTo; }, 800);
       });
   }, []);
 
