@@ -151,15 +151,26 @@ export class PoolsService {
         maxParticipants: true,
         rules: true,
         status: true,
+        championshipId: true,
+        championship: { select: { id: true, name: true } },
         organizer: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-          },
+          select: { id: true, email: true, fullName: true },
         },
-        _count: {
-          select: { members: true },
+        _count: { select: { members: true } },
+        poolMatches: {
+          include: {
+            match: {
+              select: {
+                id: true,
+                scheduledAt: true,
+                status: true,
+                roundId: true,
+                homeTeam: { select: { id: true, name: true, code: true, logo: true } },
+                awayTeam: { select: { id: true, name: true, code: true, logo: true } },
+              },
+            },
+          },
+          orderBy: { match: { scheduledAt: 'asc' } },
         },
       },
     });
@@ -168,9 +179,36 @@ export class PoolsService {
       throw new NotFoundException('Pool not found');
     }
 
+    // Fallback: se sem PoolMatch específico, busca todas do campeonato (máx 10 para preview)
+    let matches = pool.poolMatches.map((pm) => pm.match);
+    if (matches.length === 0 && pool.championshipId) {
+      matches = await this.prisma.match.findMany({
+        where: { championshipId: pool.championshipId },
+        select: {
+          id: true,
+          scheduledAt: true,
+          status: true,
+          roundId: true,
+          homeTeam: { select: { id: true, name: true, code: true, logo: true } },
+          awayTeam: { select: { id: true, name: true, code: true, logo: true } },
+        },
+        orderBy: { scheduledAt: 'asc' },
+        take: 10,
+      }) as any[];
+    }
+
+    const now = new Date();
+    const lockThreshold = 15 * 60 * 1000;
+    const allMatchesLocked = matches.length > 0 && matches.every((m: any) => {
+      if (m.status === 'FINISHED' || m.status === 'LIVE') return true;
+      return now.getTime() > new Date(m.scheduledAt).getTime() - lockThreshold;
+    });
+
     return {
       ...pool,
       memberCount: pool._count.members,
+      matches,
+      allMatchesLocked,
     };
   }
 

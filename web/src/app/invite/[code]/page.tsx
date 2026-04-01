@@ -7,7 +7,9 @@ import { useJoinByCode } from '@/hooks/use-pools';
 import api from '@/lib/api';
 import { Pool } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
+import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
 function getPoolStatus(pool: Pool) {
@@ -204,6 +206,55 @@ export default function InvitePage() {
               />
             </div>
           </div>
+
+          {/* Partidas do bolão */}
+          {(pool as any).matches?.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Calendar className="size-3.5" />
+                Partidas ({(pool as any).matches.length})
+              </p>
+              <div className="rounded-xl border border-gray-700/40 overflow-hidden divide-y divide-gray-800/60">
+                {(pool as any).matches.slice(0, 6).map((match: any) => {
+                  const isLocked = match.status === 'FINISHED' || match.status === 'LIVE' ||
+                    new Date().getTime() > new Date(match.scheduledAt).getTime() - 15 * 60 * 1000;
+                  return (
+                    <div key={match.id} className="flex items-center gap-2 px-3 py-2.5 bg-gray-800/30">
+                      {/* Data */}
+                      <span className="text-[10px] text-gray-500 shrink-0 w-16 text-center leading-tight">
+                        {format(new Date(match.scheduledAt), "dd/MM\nHH:mm", { locale: ptBR })}
+                      </span>
+                      {/* Times */}
+                      <div className="flex flex-1 items-center justify-center gap-2 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                          {match.homeTeam?.logo
+                            ? <img src={match.homeTeam.logo} alt="" className="size-5 object-contain shrink-0" />
+                            : <div className="size-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-300 shrink-0">{match.homeTeam?.code}</div>}
+                          <span className="text-xs font-semibold text-gray-200 truncate text-right">{match.homeTeam?.name}</span>
+                        </div>
+                        <span className="text-gray-600 text-xs shrink-0">vs</span>
+                        <div className="flex items-center gap-1.5 flex-1 justify-start min-w-0">
+                          <span className="text-xs font-semibold text-gray-200 truncate">{match.awayTeam?.name}</span>
+                          {match.awayTeam?.logo
+                            ? <img src={match.awayTeam.logo} alt="" className="size-5 object-contain shrink-0" />
+                            : <div className="size-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-300 shrink-0">{match.awayTeam?.code}</div>}
+                        </div>
+                      </div>
+                      {/* Status */}
+                      {isLocked && (
+                        <Lock className="size-3 text-gray-600 shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+                {(pool as any).matches.length > 6 && (
+                  <div className="px-3 py-2 bg-gray-800/20 text-center">
+                    <span className="text-xs text-gray-500">+{(pool as any).matches.length - 6} partidas</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Descrição */}
           {pool.description && (
