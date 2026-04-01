@@ -10,11 +10,15 @@ CREATE TYPE "PoolMemberStatus" AS ENUM ('PENDING', 'CONFIRMED', 'REJECTED');
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
 
+-- CreateEnum
+CREATE TYPE "MatchStatus" AS ENUM ('SCHEDULED', 'LIVE', 'FINISHED', 'CANCELLED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
+    "password" TEXT,
+    "googleId" TEXT,
     "fullName" TEXT NOT NULL,
     "avatar" TEXT,
     "bio" TEXT,
@@ -75,9 +79,11 @@ CREATE TABLE "Match" (
     "awayTeamId" TEXT NOT NULL,
     "roundId" TEXT,
     "scheduledAt" TIMESTAMP(3) NOT NULL,
+    "status" "MatchStatus" NOT NULL DEFAULT 'SCHEDULED',
     "homeScoreResult" INTEGER,
     "awayScoreResult" INTEGER,
     "knockoutWinnerId" TEXT,
+    "externalId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -94,8 +100,10 @@ CREATE TABLE "Pool" (
     "inviteCode" TEXT NOT NULL,
     "entryFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "maxParticipants" INTEGER NOT NULL,
+    "cotasPerParticipant" INTEGER NOT NULL DEFAULT 1,
     "status" "PoolStatus" NOT NULL DEFAULT 'OPEN',
     "rules" TEXT,
+    "pixKey" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -103,13 +111,25 @@ CREATE TABLE "Pool" (
 );
 
 -- CreateTable
-CREATE TABLE "PoolMember" (
+CREATE TABLE "PoolMatch" (
+    "poolId" TEXT NOT NULL,
+    "matchId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PoolMatch_pkey" PRIMARY KEY ("poolId","matchId")
+);
+
+-- CreateTable
+CREATE TABLE "pool_members" (
     "poolId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "status" "PoolMemberStatus" NOT NULL DEFAULT 'PENDING',
+    "numCotas" INTEGER NOT NULL DEFAULT 1,
     "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "prize_paid_at" TIMESTAMP(3),
+    "prize_amount" DOUBLE PRECISION,
 
-    CONSTRAINT "PoolMember_pkey" PRIMARY KEY ("poolId","userId")
+    CONSTRAINT "pool_members_pkey" PRIMARY KEY ("poolId","userId")
 );
 
 -- CreateTable
@@ -121,6 +141,7 @@ CREATE TABLE "Prediction" (
     "homeScore" INTEGER NOT NULL,
     "awayScore" INTEGER NOT NULL,
     "knockoutWinnerId" TEXT,
+    "cotaIndex" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -135,7 +156,10 @@ CREATE TABLE "Payment" (
     "amount" DOUBLE PRECISION NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     "transactionId" TEXT,
+    "pixPayload" TEXT,
+    "paymentProofUrl" TEXT,
     "paidAt" TIMESTAMP(3),
+    "userNotifiedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -176,6 +200,9 @@ CREATE TABLE "AuditLog" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_googleId_key" ON "User"("googleId");
+
+-- CreateIndex
 CREATE INDEX "User_email_idx" ON "User"("email");
 
 -- CreateIndex
@@ -198,6 +225,9 @@ CREATE UNIQUE INDEX "Team_code_key" ON "Team"("code");
 
 -- CreateIndex
 CREATE INDEX "Team_code_idx" ON "Team"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Match_externalId_key" ON "Match"("externalId");
 
 -- CreateIndex
 CREATE INDEX "Match_championshipId_idx" ON "Match"("championshipId");
@@ -224,7 +254,13 @@ CREATE INDEX "Pool_inviteCode_idx" ON "Pool"("inviteCode");
 CREATE INDEX "Pool_createdAt_idx" ON "Pool"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "PoolMember_userId_idx" ON "PoolMember"("userId");
+CREATE INDEX "PoolMatch_poolId_idx" ON "PoolMatch"("poolId");
+
+-- CreateIndex
+CREATE INDEX "PoolMatch_matchId_idx" ON "PoolMatch"("matchId");
+
+-- CreateIndex
+CREATE INDEX "pool_members_userId_idx" ON "pool_members"("userId");
 
 -- CreateIndex
 CREATE INDEX "Prediction_poolId_idx" ON "Prediction"("poolId");
@@ -236,7 +272,7 @@ CREATE INDEX "Prediction_userId_idx" ON "Prediction"("userId");
 CREATE INDEX "Prediction_matchId_idx" ON "Prediction"("matchId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Prediction_userId_matchId_poolId_key" ON "Prediction"("userId", "matchId", "poolId");
+CREATE UNIQUE INDEX "Prediction_userId_matchId_poolId_cotaIndex_key" ON "Prediction"("userId", "matchId", "poolId", "cotaIndex");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Payment_transactionId_key" ON "Payment"("transactionId");
@@ -290,10 +326,16 @@ ALTER TABLE "Pool" ADD CONSTRAINT "Pool_organizerId_fkey" FOREIGN KEY ("organize
 ALTER TABLE "Pool" ADD CONSTRAINT "Pool_championshipId_fkey" FOREIGN KEY ("championshipId") REFERENCES "Championship"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PoolMember" ADD CONSTRAINT "PoolMember_poolId_fkey" FOREIGN KEY ("poolId") REFERENCES "Pool"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PoolMatch" ADD CONSTRAINT "PoolMatch_poolId_fkey" FOREIGN KEY ("poolId") REFERENCES "Pool"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PoolMember" ADD CONSTRAINT "PoolMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "PoolMatch" ADD CONSTRAINT "PoolMatch_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pool_members" ADD CONSTRAINT "pool_members_poolId_fkey" FOREIGN KEY ("poolId") REFERENCES "Pool"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "pool_members" ADD CONSTRAINT "pool_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Prediction" ADD CONSTRAINT "Prediction_poolId_fkey" FOREIGN KEY ("poolId") REFERENCES "Pool"("id") ON DELETE CASCADE ON UPDATE CASCADE;
