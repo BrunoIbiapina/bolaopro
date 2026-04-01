@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, CheckSquare, Square, Trophy, Info, AlertTriangle, Lock, Plus, X } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckSquare, Square, Trophy, Info, AlertTriangle, Lock, Plus, X, UserCheck, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -384,7 +384,7 @@ export default function NewPoolPage() {
                                 : 'border-surface-lighter text-gray-400 hover:border-gray-500'
                             }`}
                           >
-                            <span>⚽</span> Sim, quero participar
+                            <UserCheck className="w-4 h-4" /> Sim, quero participar
                           </button>
                           <button
                             type="button"
@@ -395,7 +395,7 @@ export default function NewPoolPage() {
                                 : 'border-surface-lighter text-gray-400 hover:border-gray-500'
                             }`}
                           >
-                            <span>🛠️</span> Só criar o bolão
+                            <Wrench className="w-4 h-4" /> Só criar o bolão
                           </button>
                         </div>
                       </div>
@@ -436,7 +436,7 @@ export default function NewPoolPage() {
                       {/* Aviso quando escolhe "só criar" */}
                       {!wantsToParticipate && (
                         <div className="rounded-xl border border-gray-600/30 bg-gray-800/30 px-4 py-3 flex items-start gap-2.5">
-                          <span className="text-base shrink-0 mt-0.5">ℹ️</span>
+                          <Info className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
                           <p className="text-xs text-gray-400 leading-relaxed">
                             Você será o organizador mas não participará. Poderá entrar no bolão depois pelo link de convite.
                           </p>

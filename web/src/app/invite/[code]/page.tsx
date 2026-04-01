@@ -7,7 +7,7 @@ import { useJoinByCode } from '@/hooks/use-pools';
 import api from '@/lib/api';
 import { Pool } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar, Clock } from 'lucide-react';
+import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar, Clock, Search, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -52,7 +52,9 @@ function ErrorScreen({ message, onHome }: { message: string; onHome: () => void 
           {/* Ícone */}
           <div className="flex justify-center">
             <div className="size-20 rounded-2xl bg-gray-800 border border-gray-700/60 flex items-center justify-center shadow-lg">
-              <span className="text-4xl">{isNotFound ? '🔍' : '⚠️'}</span>
+              {isNotFound
+                ? <Search className="size-9 text-gray-400" />
+                : <AlertTriangle className="size-9 text-yellow-500" />}
             </div>
           </div>
 
@@ -87,7 +89,7 @@ function ErrorScreen({ message, onHome }: { message: string; onHome: () => void 
             onClick={onHome}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-base shadow-lg shadow-brand-900/50 transition-all"
           >
-            <span className="text-xl">⚽</span>
+            <Trophy className="size-5" />
             Ver outros bolões
           </button>
           <p className="text-center text-xs text-gray-600 pt-1">
@@ -184,7 +186,7 @@ export default function InvitePage() {
           {/* Logo / ícone */}
           <div className="flex justify-center">
             <div className="size-16 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 shadow-lg shadow-brand-900/50 flex items-center justify-center">
-              <span className="text-3xl">⚽</span>
+              <Trophy className="size-8 text-white" />
             </div>
           </div>
 
@@ -384,9 +386,9 @@ export default function InvitePage() {
                 {joining ? (
                   <><Loader2 className="size-5 animate-spin" /> Entrando...</>
                 ) : isAuthenticated ? (
-                  <><span className="text-xl">⚽</span> Entrar no bolão <ArrowRight className="size-4" /></>
+                  <>Entrar no bolão <ArrowRight className="size-4" /></>
                 ) : (
-                  <><span className="text-xl">👋</span> Criar conta e entrar <ArrowRight className="size-4" /></>
+                  <><UserPlus className="size-4" /> Criar conta e entrar <ArrowRight className="size-4" /></>
                 )}
               </button>
 
