@@ -40,10 +40,30 @@ export interface ApiMatch {
   competition: { name: string; code: string };
 }
 
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
 @Injectable()
 export class FootballDataService {
   private readonly logger = new Logger(FootballDataService.name);
   private client: AxiosInstance | null = null;
+  private cache = new Map<string, CacheEntry<any>>();
+
+  private getCache<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  private setCache<T>(key: string, data: T, ttlMs: number): void {
+    this.cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  }
 
   private getClient(): AxiosInstance {
     const apiKey = process.env.FOOTBALL_DATA_API_KEY;
@@ -99,9 +119,17 @@ export class FootballDataService {
   }
 
   async getStandings(code: string): Promise<any> {
+    const cacheKey = `standings:${code}`;
+    const cached = this.getCache<any>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[cache hit] standings ${code}`);
+      return cached;
+    }
+
     const client = this.getClient();
     try {
       const response = await client.get(`/competitions/${code}/standings`);
+      this.setCache(cacheKey, response.data, 30 * 60 * 1000); // 30 min
       return response.data;
     } catch (err: any) {
       this.logger.error(`Erro ao buscar classificação de ${code}: ${err?.message}`);
@@ -110,6 +138,13 @@ export class FootballDataService {
   }
 
   async getUpcomingMatches(code: string): Promise<ApiMatch[]> {
+    const cacheKey = `matches:${code}`;
+    const cached = this.getCache<ApiMatch[]>(cacheKey);
+    if (cached) {
+      this.logger.debug(`[cache hit] matches ${code}`);
+      return cached;
+    }
+
     const client = this.getClient();
 
     // Estratégia 1: data range -1 dia até +14 dias (margem de fuso horário)
@@ -131,13 +166,15 @@ export class FootballDataService {
           params: { status: 'SCHEDULED,TIMED,IN_PLAY,PAUSED,FINISHED' },
         });
         const all = (fallback.data.matches as ApiMatch[]) ?? [];
-        // Retorna últimas 5 finalizadas + todas ao vivo + próximas 10 agendadas
         const finished = all.filter(m => m.status === 'FINISHED').slice(-5);
         const live = all.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
         const scheduled = all.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED').slice(0, 10);
-        return [...finished, ...live, ...scheduled];
+        const result = [...finished, ...live, ...scheduled];
+        this.setCache(cacheKey, result, 5 * 60 * 1000); // 5 min
+        return result;
       }
 
+      this.setCache(cacheKey, matches, 5 * 60 * 1000); // 5 min
       return matches;
     } catch (err: any) {
       this.logger.error(
