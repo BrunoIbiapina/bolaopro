@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, CheckSquare, Square, Trophy, Info, AlertTriangle, Lock, Plus, X, UserCheck, Wrench } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckSquare, Square, Trophy, Info, AlertTriangle, Lock, Globe, Users, Plus, X, UserCheck, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -32,6 +32,7 @@ const schema = z.object({
   organizerCotas: z.coerce.number().min(0).max(10).default(1),
   rules: z.string().optional(),
   pixKey: z.string().optional(),
+  isPublic: z.boolean().default(false),
 });
 
 type CreatePoolForm = z.infer<typeof schema>;
@@ -82,6 +83,7 @@ export default function NewPoolPage() {
       cotasPerParticipant: 1,
       organizerCotas: 1,
       rules: '',
+      isPublic: false,
     },
   });
 
@@ -153,6 +155,7 @@ export default function NewPoolPage() {
         organizerCotas: Number(data.organizerCotas ?? 1),
         rules: data.rules,
         pixKey: data.pixKey || undefined,
+        isPublic: data.isPublic ?? false,
         matchIds: selectedMatchIds.length > 0 ? selectedMatchIds : undefined,
       } as any,
       {
@@ -845,6 +848,45 @@ export default function NewPoolPage() {
                     rows={5}
                     className="flex w-full rounded-lg border border-surface-lighter bg-surface/50 px-3 py-2 text-sm text-gray-50 placeholder:text-gray-500 transition-colors focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                   />
+                </div>
+
+                {/* ── Visibilidade ── */}
+                <div>
+                  <label className="text-sm font-medium text-gray-50 block mb-2">Visibilidade do bolão</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Privado */}
+                    <button
+                      type="button"
+                      onClick={() => form.setValue('isPublic', false)}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        !form.watch('isPublic')
+                          ? 'border-brand-500 bg-brand-500/10'
+                          : 'border-surface-lighter bg-surface/50 hover:border-gray-600'
+                      }`}
+                    >
+                      <Lock className={`h-5 w-5 ${!form.watch('isPublic') ? 'text-brand-400' : 'text-gray-500'}`} />
+                      <div className="text-center">
+                        <p className={`text-sm font-semibold ${!form.watch('isPublic') ? 'text-brand-300' : 'text-gray-400'}`}>Privado</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">Só quem tiver o link de convite consegue entrar</p>
+                      </div>
+                    </button>
+                    {/* Público */}
+                    <button
+                      type="button"
+                      onClick={() => form.setValue('isPublic', true)}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        form.watch('isPublic')
+                          ? 'border-brand-500 bg-brand-500/10'
+                          : 'border-surface-lighter bg-surface/50 hover:border-gray-600'
+                      }`}
+                    >
+                      <Globe className={`h-5 w-5 ${form.watch('isPublic') ? 'text-brand-400' : 'text-gray-500'}`} />
+                      <div className="text-center">
+                        <p className={`text-sm font-semibold ${form.watch('isPublic') ? 'text-brand-300' : 'text-gray-400'}`}>Público</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">Aparece na aba "Descobrir" para qualquer usuário</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Info: pagamentos vão para a chave PIX fixa do sistema */}

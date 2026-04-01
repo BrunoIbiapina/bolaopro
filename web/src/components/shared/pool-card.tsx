@@ -7,7 +7,7 @@ import { Pool } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './status-badge';
-import { Users, Trophy, Trash2, Loader2, AlertTriangle } from 'lucide-react';
+import { Users, Trophy, Trash2, Loader2, AlertTriangle, Lock, Globe } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useDeletePool } from '@/hooks/use-pools';
 import { useAuth } from '@/hooks/use-auth';
@@ -66,6 +66,20 @@ export function PoolCard({ pool }: PoolCardProps) {
                 <p className="text-sm text-gray-400 mt-0.5 truncate">{pool.championship?.name}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {/* Visibilidade */}
+                {(pool as any).isPublic !== undefined && (
+                  <span
+                    title={(pool as any).isPublic ? 'Bolão público' : 'Bolão privado'}
+                    className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                      (pool as any).isPublic
+                        ? 'bg-blue-500/15 text-blue-400'
+                        : 'bg-gray-700/60 text-gray-400'
+                    }`}
+                  >
+                    {(pool as any).isPublic ? <Globe className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+                    {(pool as any).isPublic ? 'Público' : 'Privado'}
+                  </span>
+                )}
                 <StatusBadge status={pool.status} />
                 {isOrganizer && (
                   <button

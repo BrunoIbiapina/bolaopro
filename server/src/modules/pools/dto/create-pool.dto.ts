@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsArray, Min, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsArray, IsBoolean, Min, IsNotEmpty } from 'class-validator';
 
 export class CreatePoolDto {
   @IsString()
@@ -35,6 +35,10 @@ export class CreatePoolDto {
   @IsOptional()
   @IsString()
   pixKey?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
 
   @IsOptional()
   @IsArray()

@@ -36,6 +36,7 @@ export class PoolsService {
         cotasPerParticipant: createPoolDto.cotasPerParticipant ?? 1,
         rules: createPoolDto.rules,
         pixKey: createPoolDto.pixKey,
+        isPublic: createPoolDto.isPublic ?? false,
         inviteCode,
         status: 'OPEN',
       },
@@ -447,6 +448,7 @@ export class PoolsService {
     const pools = await this.prisma.pool.findMany({
       where: {
         status: 'OPEN',
+        isPublic: true,
         NOT: {
           OR: [
             { organizerId: userId },

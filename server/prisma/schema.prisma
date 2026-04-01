@@ -153,6 +153,7 @@ model Pool {
   status                PoolStatus @default(OPEN)
   rules                 String?
   pixKey                String?
+  isPublic              Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
