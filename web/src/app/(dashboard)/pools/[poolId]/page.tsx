@@ -741,7 +741,7 @@ function PrizeBanner({ poolId, onGoToPayment }: { poolId: string; onGoToPayment:
         <div className="rounded-xl bg-black/30 p-3 text-center">
           <p className="text-xs text-gray-400 mb-1">🏆 Se ganhar sozinho</p>
           <p className="text-2xl font-bold text-green-400">{formatCurrency(prize.potentialWinIfAlone)}</p>
-          <p className="text-xs text-gray-500 mt-0.5">você paga {formatCurrency(prize.myContribution)}</p>
+          <p className="text-xs text-gray-500 mt-0.5">sua entrada: {formatCurrency(prize.myContribution)}</p>
         </div>
       </div>
       {prize.myStatus === 'PENDING' && (
