@@ -21,6 +21,15 @@ function crc16(str: string): string {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
+/** Remove acentos e caracteres não-ASCII para cumprir a spec EMV/PIX */
+function sanitizeAscii(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/[^\x20-\x7E]/g, '')    // remove non-ASCII
+    .trim();
+}
+
 export function generatePixPayload(params: {
   pixKey: string;
   merchantName: string;
@@ -29,7 +38,10 @@ export function generatePixPayload(params: {
   txid?: string;
   description?: string;
 }): string {
-  const { pixKey, merchantName, merchantCity, amount, txid, description } = params;
+  const { pixKey, amount, txid } = params;
+  const merchantName = sanitizeAscii(params.merchantName);
+  const merchantCity = sanitizeAscii(params.merchantCity);
+  const description = params.description ? sanitizeAscii(params.description) : undefined;
 
   // Merchant Account Information (campo 26)
   const gui = emv('00', 'br.gov.bcb.pix');
