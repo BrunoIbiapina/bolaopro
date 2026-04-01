@@ -30,6 +30,7 @@ export class RankingsService {
             email: true,
             fullName: true,
             avatar: true,
+            pixKey: true,
           },
         },
       },
@@ -116,8 +117,14 @@ export class RankingsService {
       })),
     );
 
-    return sortedRanking.map((entry, index) => {
+    // Calcular totais para o frontend
+    const confirmedMembers = members.filter((m) => m.status === 'CONFIRMED');
+    const totalCotas = confirmedMembers.reduce((sum, m) => sum + (m.numCotas ?? 1), 0);
+    const totalPot = totalCotas * pool.entryFee;
+
+    const rankingList = sortedRanking.map((entry, index) => {
       const original = ranking.find((r) => r.user.id === entry.userId)!;
+      const memberRecord = members.find((m) => m.userId === entry.userId);
       return {
         position: index + 1,
         user: original.user,
@@ -125,8 +132,36 @@ export class RankingsService {
         correctResults: entry.correctResults,
         correctWinners: entry.correctWinners,
         totalPredictions: entry.predictions,
+        numCotas: memberRecord?.numCotas ?? 1,
+        memberStatus: memberRecord?.status ?? 'PENDING',
+        potentialPrize: 0,
+        prizePaidAt: (memberRecord as any)?.prizePaidAt ?? null,
+        prizeAmount: (memberRecord as any)?.prizeAmount ?? null,
       };
     });
+
+    // Calcular líderes (posição 1) e prêmio potencial
+    const leaders = rankingList.filter((r) => r.position === 1);
+    const leadersCount = leaders.length;
+    const prizePerLeader = leadersCount > 0 ? totalPot / leadersCount : 0;
+    const hasWinner = rankingList.some((r) => r.totalScore > 0);
+
+    rankingList.forEach((r) => {
+      if (r.position <= leadersCount && hasWinner) {
+        r.potentialPrize = prizePerLeader;
+      }
+    });
+
+    return {
+      totalPot,
+      totalCotas,
+      confirmedMembers: confirmedMembers.length,
+      prizePerLeader,
+      leadersCount,
+      hasWinner,
+      noWinnerReason: hasWinner ? null : 'Nenhuma partida finalizada ainda',
+      ranking: rankingList,
+    };
   }
 
   async recalculatePoolRanking(poolId: string) {
