@@ -7,7 +7,7 @@ import { useJoinByCode } from '@/hooks/use-pools';
 import api from '@/lib/api';
 import { Pool } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar } from 'lucide-react';
+import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -208,12 +208,12 @@ export default function InvitePage() {
           </div>
 
           {/* Partidas do bolão */}
-          {(pool as any).matches?.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Calendar className="size-3.5" />
-                Partidas ({(pool as any).matches.length})
-              </p>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="size-3.5" />
+              Partidas
+            </p>
+            {(pool as any).matches?.length > 0 ? (
               <div className="rounded-xl border border-gray-700/40 overflow-hidden divide-y divide-gray-800/60">
                 {(pool as any).matches.slice(0, 6).map((match: any) => {
                   const isLocked = match.status === 'FINISHED' || match.status === 'LIVE' ||
@@ -253,8 +253,13 @@ export default function InvitePage() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="rounded-xl border border-gray-700/30 bg-gray-800/20 px-4 py-4 flex items-center gap-3">
+                <Clock className="size-4 text-gray-500 shrink-0" />
+                <p className="text-xs text-gray-500">As partidas serão divulgadas em breve pelo organizador.</p>
+              </div>
+            )}
+          </div>
 
           {/* Descrição */}
           {pool.description && (

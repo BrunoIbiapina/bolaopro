@@ -267,7 +267,7 @@ function MyResultsSection({ poolId, userId }: { poolId: string; userId: string }
 
 // ─── Matches Section ─────────────────────────────────────────────────────────
 // Mostra todas as partidas do bolão com times, horário e placar (quando disponível)
-function MatchesSection({ poolId, isAdmin, championshipId }: { poolId: string; isAdmin: boolean; championshipId?: string }) {
+function MatchesSection({ poolId, isAdmin, isOrganizer, championshipId }: { poolId: string; isAdmin: boolean; isOrganizer?: boolean; championshipId?: string }) {
   const { data: matches, isLoading } = usePoolMatches(poolId);
 
   if (isLoading) return null;
@@ -285,12 +285,12 @@ function MatchesSection({ poolId, isAdmin, championshipId }: { poolId: string; i
         <div>
           <p className="text-sm font-semibold text-gray-300">Nenhuma partida cadastrada</p>
           <p className="text-xs text-gray-500 mt-0.5">
-            {isAdmin
+            {isAdmin || isOrganizer
               ? 'Cadastre as partidas para que os participantes possam fazer seus palpites.'
-              : 'O administrador ainda não cadastrou as partidas deste bolão.'}
+              : 'As partidas serão divulgadas em breve pelo organizador.'}
           </p>
         </div>
-        {isAdmin && championshipId && (
+        {(isAdmin || isOrganizer) && championshipId && (
           <Link
             href={`/admin/matches?championship=${championshipId}&fromPool=${poolId}`}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
@@ -2126,6 +2126,7 @@ return (
       <MatchesSection
         poolId={poolId}
         isAdmin={user?.role === UserRole.ADMIN}
+        isOrganizer={isOrganizer}
         championshipId={(pool as any).championshipId}
       />
 
