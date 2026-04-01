@@ -30,7 +30,6 @@ export class RankingsService {
             email: true,
             fullName: true,
             avatar: true,
-            pixKey: true,
           },
         },
       },
@@ -99,7 +98,7 @@ export class RankingsService {
 
       ranking.push({
         position: 0,
-        user: member.user,
+        user: member.user as any,
         totalScore,
         correctResults,
         correctWinners,
