@@ -2083,30 +2083,30 @@ return (
         championshipId={(pool as any).championshipId}
       />
 
-      {/* Tabs */}
+      {/* Tabs — barra rolável no mobile */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full">
-          <TabsTrigger value="predictions" className="flex-1 gap-1.5">
+          <TabsTrigger value="predictions" className="shrink-0 gap-1.5">
             <Target className="h-3.5 w-3.5 shrink-0" />
-            Meus Palpites
+            Palpites
           </TabsTrigger>
-          <TabsTrigger value="group" className="flex-1 gap-1.5">
+          <TabsTrigger value="group" className="shrink-0 gap-1.5">
             <Eye className="h-3.5 w-3.5 shrink-0" />
             Grupo
           </TabsTrigger>
-          <TabsTrigger value="results" className="flex-1 gap-1.5">
+          <TabsTrigger value="results" className="shrink-0 gap-1.5">
             <BarChart3 className="h-3.5 w-3.5 shrink-0" />
             Resultados
           </TabsTrigger>
-          <TabsTrigger value="payment" className="flex-1 gap-1.5">
+          <TabsTrigger value="payment" className="shrink-0 gap-1.5">
             <CreditCard className="h-3.5 w-3.5 shrink-0" />
             Pagamento
           </TabsTrigger>
-          <TabsTrigger value="ranking" className="flex-1 gap-1.5">
+          <TabsTrigger value="ranking" className="shrink-0 gap-1.5">
             <Trophy className="h-3.5 w-3.5 shrink-0" />
             Ranking
           </TabsTrigger>
-          <TabsTrigger value="members" className="flex-1 gap-1.5">
+          <TabsTrigger value="members" className="shrink-0 gap-1.5">
             <Users className="h-3.5 w-3.5 shrink-0" />
             Membros
           </TabsTrigger>
