@@ -55,8 +55,8 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsListProps>(
       ref={ref}
       className={cn(
         'flex h-10 items-center rounded-lg bg-surface/50 p-1 text-gray-400 border border-surface-lighter',
-        // Scroll horizontal no mobile sem mostrar a scrollbar
-        'overflow-x-auto',
+        // Scroll horizontal no mobile — touch-pan-x garante que scroll vertical passa para a página
+        'overflow-x-auto touch-pan-x',
         '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',
         className
       )}
