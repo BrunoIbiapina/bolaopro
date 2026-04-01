@@ -106,10 +106,11 @@ function MatchesSection({ code }: { code: string }) {
   );
 
   if (error || !matches) return (
-    <div className="text-center py-12">
-      <CircleDot className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+    <div className="text-center py-12 space-y-2">
+      <CircleDot className="w-10 h-10 text-gray-600 mx-auto" />
       <p className="text-sm text-gray-400">Não foi possível carregar as partidas.</p>
-      <p className="text-xs text-gray-600 mt-1">Tente novamente em alguns instantes.</p>
+      {error && <p className="text-xs text-red-400/70 max-w-xs mx-auto">{(error as any)?.response?.data?.message || (error as Error).message}</p>}
+      <p className="text-xs text-gray-600">Tente novamente em alguns instantes.</p>
     </div>
   );
 

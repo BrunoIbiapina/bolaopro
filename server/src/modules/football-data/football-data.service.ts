@@ -111,20 +111,39 @@ export class FootballDataService {
 
   async getUpcomingMatches(code: string): Promise<ApiMatch[]> {
     const client = this.getClient();
-    try {
-      // Próximos 7 dias
-      const dateFrom = new Date();
-      const dateTo = new Date();
-      dateTo.setDate(dateTo.getDate() + 7);
-      const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
+    // Estratégia 1: data range -1 dia até +14 dias (margem de fuso horário)
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 1);
+    const dateTo = new Date();
+    dateTo.setDate(dateTo.getDate() + 14);
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+    try {
       const response = await client.get(`/competitions/${code}/matches`, {
         params: { dateFrom: fmt(dateFrom), dateTo: fmt(dateTo) },
       });
-      return (response.data.matches as ApiMatch[]) ?? [];
+      const matches = (response.data.matches as ApiMatch[]) ?? [];
+
+      // Se veio vazio, tenta estratégia 2: últimas partidas + ao vivo + agendadas sem filtro de data
+      if (matches.length === 0) {
+        const fallback = await client.get(`/competitions/${code}/matches`, {
+          params: { status: 'SCHEDULED,TIMED,IN_PLAY,PAUSED,FINISHED' },
+        });
+        const all = (fallback.data.matches as ApiMatch[]) ?? [];
+        // Retorna últimas 5 finalizadas + todas ao vivo + próximas 10 agendadas
+        const finished = all.filter(m => m.status === 'FINISHED').slice(-5);
+        const live = all.filter(m => m.status === 'IN_PLAY' || m.status === 'PAUSED');
+        const scheduled = all.filter(m => m.status === 'SCHEDULED' || m.status === 'TIMED').slice(0, 10);
+        return [...finished, ...live, ...scheduled];
+      }
+
+      return matches;
     } catch (err: any) {
-      this.logger.error(`Erro ao buscar próximas partidas de ${code}: ${err?.message}`);
-      return [];
+      this.logger.error(
+        `Erro ao buscar partidas de ${code}: ${err?.message} | status: ${err?.response?.status} | data: ${JSON.stringify(err?.response?.data)}`,
+      );
+      throw new Error(err?.response?.data?.message || `Erro ao buscar partidas de ${code}`);
     }
   }
 }
