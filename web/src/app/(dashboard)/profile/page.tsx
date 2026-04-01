@@ -28,7 +28,6 @@ import {
 
 const profileSchema = z.object({
   fullName: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
-  email: z.string().email('Email inválido'),
   phone: z.string().optional(),
   pixKey: z.string().optional(),
 });
@@ -98,9 +97,8 @@ export default function ProfilePage() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: user?.fullName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      pixKey: user?.pixKey || '',
+      phone: (user as any)?.phone || '',
+      pixKey: (user as any)?.pixKey || '',
     },
   });
 
@@ -214,7 +212,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="text-xs font-medium text-gray-400 block mb-1.5">Email</label>
-                <Input type="email" {...profileForm.register('email')} disabled className="opacity-60 cursor-not-allowed" />
+                <Input type="email" value={user?.email || ''} readOnly disabled className="opacity-60 cursor-not-allowed" />
                 <p className="text-xs text-gray-500 mt-1">O email não pode ser alterado</p>
               </div>
 
