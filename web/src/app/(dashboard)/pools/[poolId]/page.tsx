@@ -395,14 +395,13 @@ function LiveDashboard({ poolId, userId }: { poolId: string; userId: string }) {
 
   if (!matches || !ranking) return null;
 
-  const liveMatches    = matches.filter((m: any) => m.status === 'LIVE');
-  const finishedMatches = matches.filter(
-    (m: any) => m.status === 'FINISHED' &&
-      (m.homeScoreResult !== null && m.homeScoreResult !== undefined),
-  );
-  const activeMatches = [...liveMatches, ...finishedMatches];
+  // LiveDashboard mostra APENAS partidas ao vivo enquanto o bolão não for finalizado.
+  // Partidas encerradas (FINISHED) só aparecem depois da finalização do bolão.
+  const liveMatches = matches.filter((m: any) => m.status === 'LIVE');
 
-  if (activeMatches.length === 0) return null;
+  if (liveMatches.length === 0) return null;
+
+  const activeMatches = liveMatches;
 
   const hasScores    = ranking.ranking.some((r) => r.totalScore > 0);
   const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -761,7 +760,7 @@ function PrizeBanner({ poolId, onGoToPayment }: { poolId: string; onGoToPayment:
 type ScoreMap = Record<string, { homeScore: string; awayScore: string }>;
 
 // ─── Predictions Tab ──────────────────────────────────────────────────────────
-function PredictionsTab({ poolId, member }: { poolId: string; member: any }) {
+function PredictionsTab({ poolId, member, poolStatus }: { poolId: string; member: any; poolStatus?: string }) {
   const { data: matches, isLoading: loadingMatches } = usePoolMatches(poolId);
   const { data: myPredictions, isLoading: loadingPreds } = usePredictions(poolId);
   const { mutate: save, isPending: saving } = useSavePredictions();
@@ -1098,8 +1097,20 @@ function PredictionsTab({ poolId, member }: { poolId: string; member: any }) {
         </div>
       )}
 
-      {/* Partidas encerradas (com resultado) */}
-      {finished.length > 0 && (
+      {/* Partidas encerradas — placar só visível após o admin finalizar o bolão */}
+      {finished.length > 0 && poolStatus !== 'FINISHED' && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Partidas encerradas</p>
+          <div className="rounded-xl border border-surface-lighter bg-surface/40 px-4 py-3 flex items-center gap-3">
+            <Lock className="h-4 w-4 text-gray-500 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-300 font-medium">{finished.length} partida{finished.length !== 1 ? 's' : ''} encerrada{finished.length !== 1 ? 's' : ''}</p>
+              <p className="text-xs text-gray-500 mt-0.5">O resultado será divulgado quando o admin finalizar o bolão</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {finished.length > 0 && poolStatus === 'FINISHED' && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Partidas encerradas</p>
           {finished.map((m: any) => {
@@ -1657,12 +1668,23 @@ function PaymentTab({
 }
 
 // ─── Results Tab ──────────────────────────────────────────────────────────────
-function ResultsTab({ poolId, userId }: { poolId: string; userId: string }) {
+function ResultsTab({ poolId, userId, poolStatus }: { poolId: string; userId: string; poolStatus?: string }) {
   const { data: groupData, isLoading: loadingGroup } = useGroupPredictions(poolId);
   const { data: rankingData, isLoading: loadingRanking } = useRanking(poolId);
 
   if (loadingGroup || loadingRanking) return <CardSkeleton />;
   if (!groupData || !rankingData) return null;
+
+  // Resultados só disponíveis após o admin finalizar o bolão
+  if (poolStatus !== 'FINISHED') {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="Resultados não disponíveis"
+        description="Os resultados serão divulgados quando o admin finalizar o bolão"
+      />
+    );
+  }
 
   const finishedMatches = groupData.matches.filter(
     ({ match }) => match.status === 'FINISHED' &&
@@ -2113,14 +2135,14 @@ return (
         </Link>
       )}
 
-      {/* Live Dashboard — placares + classificação em tempo real (só se não finalizado) */}
+      {/* Live Dashboard — placares em tempo real (só durante o bolão) */}
       {user && pool.status !== 'FINISHED' && <LiveDashboard poolId={poolId} userId={user.id} />}
 
       {/* Prize Banner — só mostra se bolão tem entrada paga e está aberto/fechado */}
       {user && pool.status !== 'FINISHED' && <PrizeBanner poolId={poolId} onGoToPayment={() => setActiveTab('payment')} />}
 
-      {/* Meus Resultados — só mostra se confirmado e há partidas encerradas e bolão não finalizado */}
-      {user && isConfirmed && pool.status !== 'FINISHED' && <MyResultsSection poolId={poolId} userId={user.id} />}
+      {/* Meus Resultados — só aparece APÓS o admin finalizar o bolão */}
+      {user && isConfirmed && pool.status === 'FINISHED' && <MyResultsSection poolId={poolId} userId={user.id} />}
 
       {/* Partidas do bolão — sempre visível, mostra placar quando disponível */}
       <MatchesSection
@@ -2160,7 +2182,7 @@ return (
         </TabsList>
 
         <TabsContent value="predictions" className="mt-4">
-          <PredictionsTab poolId={poolId} member={myMember} />
+          <PredictionsTab poolId={poolId} member={myMember} poolStatus={pool.status} />
         </TabsContent>
 
         <TabsContent value="group" className="mt-4">
@@ -2168,7 +2190,7 @@ return (
         </TabsContent>
 
         <TabsContent value="results" className="mt-4">
-          <ResultsTab poolId={poolId} userId={user?.id ?? ''} />
+          <ResultsTab poolId={poolId} userId={user?.id ?? ''} poolStatus={pool.status} />
         </TabsContent>
 
         <TabsContent value="payment" className="mt-4">
