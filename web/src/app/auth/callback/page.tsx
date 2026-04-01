@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { setTokens } from '@/lib/auth';
-import api from '@/lib/api';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 
 function AuthCallbackContent() {
@@ -29,22 +28,11 @@ function AuthCallbackContent() {
     // Normaliza o redirect (evita string 'null' ou caminhos inválidos)
     const redirectTo = (!redirect || redirect === 'null' || redirect === 'undefined') ? '/' : redirect;
 
-    // Valida o token antes de redirecionar
-    api.get('/users/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(() => {
-        setStatus('success');
-        // Usa window.location.href para forçar reload completo da página.
-        // Isso garante que o AuthProvider remonta e re-executa checkAuth()
-        // com o cookie já salvo — evita race condition de SPA navigation.
-        setTimeout(() => { window.location.href = redirectTo; }, 800);
-      })
-      .catch(() => {
-        // Mesmo com erro ao buscar /me, os tokens estão salvos — redireciona assim mesmo
-        setStatus('success');
-        setTimeout(() => { window.location.href = redirectTo; }, 800);
-      });
+    // NÃO usa api.get() aqui — o interceptor do axios pode chamar clearTokens()
+    // em caso de 401 e redirecionar para /login, criando o bug do "login duplo".
+    // Os tokens já estão salvos nos cookies, então basta redirecionar.
+    setStatus('success');
+    setTimeout(() => { window.location.href = redirectTo; }, 600);
   }, []);
 
   return (

@@ -127,6 +127,21 @@ export class PoolsService {
         _count: {
           select: { members: true },
         },
+        poolMatches: {
+          include: {
+            match: {
+              select: {
+                id: true,
+                scheduledAt: true,
+                status: true,
+                roundId: true,
+                homeTeam: { select: { id: true, name: true, code: true, logo: true } },
+                awayTeam: { select: { id: true, name: true, code: true, logo: true } },
+              },
+            },
+          },
+          orderBy: { match: { scheduledAt: 'asc' } },
+        },
       },
     });
 
@@ -134,9 +149,28 @@ export class PoolsService {
       throw new NotFoundException('Pool not found');
     }
 
+    // Partidas: específicas do pool ou fallback do campeonato
+    let matches = pool.poolMatches.map((pm) => pm.match);
+    if (matches.length === 0 && pool.championshipId) {
+      matches = await this.prisma.match.findMany({
+        where: { championshipId: pool.championshipId },
+        select: {
+          id: true,
+          scheduledAt: true,
+          status: true,
+          roundId: true,
+          homeTeam: { select: { id: true, name: true, code: true, logo: true } },
+          awayTeam: { select: { id: true, name: true, code: true, logo: true } },
+        },
+        orderBy: { scheduledAt: 'asc' },
+        take: 20,
+      }) as any[];
+    }
+
     return {
       ...pool,
       memberCount: pool._count.members,
+      matches,
     };
   }
 
