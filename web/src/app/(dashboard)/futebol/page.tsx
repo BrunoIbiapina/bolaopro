@@ -97,7 +97,7 @@ function MatchCard({ match }: { match: FdMatch }) {
 
 // ── Matches Tab ───────────────────────────────────────────────────────────────
 function MatchesSection({ code }: { code: string }) {
-  const { data: matches, isLoading, error, isFetching } = usePublicMatches(code);
+  const { data: matches, isLoading, error, isFetching, refetch } = usePublicMatches(code);
 
   if (isLoading) return (
     <div className="flex justify-center py-12">
@@ -105,19 +105,25 @@ function MatchesSection({ code }: { code: string }) {
     </div>
   );
 
-  if (error || !matches) return (
-    <div className="text-center py-12 space-y-2">
+  if (error) return (
+    <div className="text-center py-12 space-y-3">
       <CircleDot className="w-10 h-10 text-gray-600 mx-auto" />
       <p className="text-sm text-gray-400">Não foi possível carregar as partidas.</p>
-      {error && <p className="text-xs text-red-400/70 max-w-xs mx-auto">{(error as any)?.response?.data?.message || (error as Error).message}</p>}
-      <p className="text-xs text-gray-600">Tente novamente em alguns instantes.</p>
+      <p className="text-xs text-red-400/70 max-w-xs mx-auto">{(error as any)?.response?.data?.message || (error as Error).message}</p>
+      <button onClick={() => refetch()} className="text-xs text-brand-400 hover:text-brand-300 underline">
+        Tentar novamente
+      </button>
     </div>
   );
 
-  if (matches.length === 0 && !isFetching) return (
-    <div className="text-center py-12">
-      <CalendarDays className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-      <p className="text-sm text-gray-400">Nenhuma partida nos próximos 7 dias.</p>
+  if (!matches || (matches.length === 0 && !isFetching)) return (
+    <div className="text-center py-12 space-y-2">
+      <CalendarDays className="w-10 h-10 text-gray-600 mx-auto" />
+      <p className="text-sm text-gray-400">Nenhuma partida encontrada.</p>
+      <p className="text-xs text-gray-600">A API pode estar com limite de requisições. Tente novamente em 1 minuto.</p>
+      <button onClick={() => refetch()} className="text-xs text-brand-400 hover:text-brand-300 underline">
+        Tentar novamente
+      </button>
     </div>
   );
 
