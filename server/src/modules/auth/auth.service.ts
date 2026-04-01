@@ -37,7 +37,7 @@ export class AuthService {
         password: hashedPassword,
         emailVerificationToken,
         emailVerifiedAt: null,
-        ...(registerDto.pixKey ? { pixKey: registerDto.pixKey } : {}),
+        // pixKey não existe no model User — removido
       },
     });
 

@@ -482,7 +482,7 @@ export class PoolsService {
     const pool = await this.getPoolById(poolId);
     const confirmedMembers = await (this.prisma.poolMember.findMany as any)({
       where: { poolId, status: 'CONFIRMED' },
-      include: { user: { select: { id: true, fullName: true, avatar: true, pixKey: true } } },
+      include: { user: { select: { id: true, fullName: true, avatar: true } } },
     }) as any[];
     const totalCotas = confirmedMembers.reduce((sum, m) => sum + m.numCotas, 0);
     const totalPrize = totalCotas * pool.entryFee;
@@ -498,7 +498,7 @@ export class PoolsService {
         userId: m.userId,
         fullName: (m.user as any).fullName,
         avatar: (m.user as any).avatar,
-        pixKey: (m.user as any).pixKey,
+        pixKey: null, // pixKey não existe no model User — campo removido
         numCotas: m.numCotas,
         prizePaid: (m as any).prizePaid ?? false,
         prizeAmount: (m as any).prizeAmount ?? null,
