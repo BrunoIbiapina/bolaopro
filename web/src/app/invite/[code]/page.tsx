@@ -32,7 +32,7 @@ function LoadingScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-950 via-gray-900 to-gray-950">
       <div className="text-center space-y-4">
-        <div className="size-14 border-4 border-brand-500 border-r-transparent rounded-full animate-spin mx-auto" />
+        <span className="block text-5xl animate-ball-roll mx-auto w-fit">⚽</span>
         <p className="text-gray-400 text-sm">Carregando convite...</p>
       </div>
     </div>
