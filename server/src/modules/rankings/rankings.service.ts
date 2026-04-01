@@ -30,6 +30,8 @@ export class RankingsService {
             email: true,
             fullName: true,
             avatar: true,
+            pixKey: true,
+            phone: true,
           },
         },
       },

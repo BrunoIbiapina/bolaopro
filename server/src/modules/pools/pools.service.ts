@@ -358,6 +358,8 @@ export class PoolsService {
             email: true,
             fullName: true,
             avatar: true,
+            pixKey: true,
+            phone: true,
           },
         },
       },

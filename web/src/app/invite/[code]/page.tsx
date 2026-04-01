@@ -7,7 +7,7 @@ import { useJoinByCode } from '@/hooks/use-pools';
 import api from '@/lib/api';
 import { Pool } from '@/types';
 import { formatCurrency } from '@/lib/utils';
-import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar, Clock, Search, UserPlus } from 'lucide-react';
+import { Users, Trophy, Lock, CheckCircle2, AlertTriangle, ArrowRight, Loader2, Calendar, Clock, Search, UserPlus, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -108,13 +108,16 @@ export default function InvitePage() {
   const router = useRouter();
   const code = params.code as string;
 
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, updateUser } = useAuth();
   const { mutate: joinByCode, isPending: joining } = useJoinByCode();
 
   const [pool, setPool] = useState<Pool | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
+  const [showPixStep, setShowPixStep] = useState(false);
+  const [pixInput, setPixInput] = useState('');
+  const [savingPix, setSavingPix] = useState(false);
 
   // Fetch pool info (public endpoint)
   useEffect(() => {
@@ -138,11 +141,22 @@ export default function InvitePage() {
     }
   }, [isAuthenticated, pool]);
 
+  const doJoin = () => {
+    joinByCode(
+      { inviteCode: code, numCotas: 1 },
+      {
+        onSuccess: (data) => {
+          setJoined(true);
+          setTimeout(() => router.push(`/pools/${(data as any).poolId || (data as any).id}`), 1200);
+        },
+      },
+    );
+  };
+
   const handleJoin = () => {
     if (!pool) return;
 
     if (!isAuthenticated) {
-      // Salva o código para uso após login/cadastro
       if (typeof window !== 'undefined') {
         localStorage.setItem('pendingInviteCode', code);
       }
@@ -150,16 +164,30 @@ export default function InvitePage() {
       return;
     }
 
-    joinByCode(
-      { inviteCode: code, numCotas: 1 },
-      {
-        onSuccess: (data) => {
-          setJoined(true);
-          // Redirect ao bolão após pequeno delay para o toast aparecer
-          setTimeout(() => router.push(`/pools/${(data as any).id}`), 1200);
-        },
-      },
-    );
+    // Se bolão pago e usuário não tem PIX cadastrado → pede antes de entrar
+    if (pool.entryFee > 0 && !user?.pixKey) {
+      setShowPixStep(true);
+      return;
+    }
+
+    doJoin();
+  };
+
+  const handleSavePixAndJoin = async () => {
+    if (!pixInput.trim()) return;
+    setSavingPix(true);
+    try {
+      const response = await api.patch('/users/me', { pixKey: pixInput.trim() });
+      updateUser(response.data);
+      setShowPixStep(false);
+      doJoin();
+    } catch {
+      // continua e tenta entrar mesmo assim
+      setShowPixStep(false);
+      doJoin();
+    } finally {
+      setSavingPix(false);
+    }
   };
 
   if (loading || authLoading) return <LoadingScreen />;
@@ -378,33 +406,85 @@ export default function InvitePage() {
 
           {joinable && !joined && (
             <>
-              <button
-                onClick={handleJoin}
-                disabled={joining}
-                className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-base shadow-lg shadow-brand-900/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {joining ? (
-                  <><Loader2 className="size-5 animate-spin" /> Entrando...</>
-                ) : isAuthenticated ? (
-                  <>Entrar no bolão <ArrowRight className="size-4" /></>
-                ) : (
-                  <><UserPlus className="size-4" /> Criar conta e entrar <ArrowRight className="size-4" /></>
-                )}
-              </button>
-
-              {!isAuthenticated && (
-                <p className="text-xs text-gray-500 text-center">
-                  Já tem conta?{' '}
+              {/* Passo PIX — aparece se bolão é pago e usuário não tem PIX */}
+              {showPixStep ? (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-brand-500/20 bg-brand-500/5 p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-brand-600/20 flex items-center justify-center shrink-0">
+                        <Banknote className="size-4 text-brand-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-100">Sua chave PIX</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          Necessária para receber o prêmio caso você vença. Pode alterar depois no perfil.
+                        </p>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={pixInput}
+                      onChange={(e) => setPixInput(e.target.value)}
+                      placeholder="CPF, email, telefone ou chave aleatória"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowPixStep(false)}
+                        className="flex-1 py-2.5 rounded-xl border border-gray-600 text-sm text-gray-400 hover:border-gray-500 transition-colors"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        onClick={handleSavePixAndJoin}
+                        disabled={!pixInput.trim() || savingPix}
+                        className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2"
+                      >
+                        {savingPix ? <><Loader2 className="size-4 animate-spin" /> Salvando...</> : <>Confirmar e entrar <ArrowRight className="size-4" /></>}
+                      </button>
+                    </div>
+                    <p className="text-center text-xs text-gray-600">
+                      ou{' '}
+                      <button
+                        onClick={() => { setShowPixStep(false); doJoin(); }}
+                        className="text-gray-500 underline hover:text-gray-400"
+                      >
+                        entrar sem informar agora
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
                   <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined') localStorage.setItem('pendingInviteCode', code);
-                      router.push(`/login?redirect=/invite/${code}`);
-                    }}
-                    className="text-brand-400 hover:text-brand-300 font-medium"
+                    onClick={handleJoin}
+                    disabled={joining}
+                    className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-base shadow-lg shadow-brand-900/50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Fazer login
+                    {joining ? (
+                      <><Loader2 className="size-5 animate-spin" /> Entrando...</>
+                    ) : isAuthenticated ? (
+                      <>Entrar no bolão <ArrowRight className="size-4" /></>
+                    ) : (
+                      <><UserPlus className="size-4" /> Criar conta e entrar <ArrowRight className="size-4" /></>
+                    )}
                   </button>
-                </p>
+
+                  {!isAuthenticated && (
+                    <p className="text-xs text-gray-500 text-center">
+                      Já tem conta?{' '}
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') localStorage.setItem('pendingInviteCode', code);
+                          router.push(`/login?redirect=/invite/${code}`);
+                        }}
+                        className="text-brand-400 hover:text-brand-300 font-medium"
+                      >
+                        Fazer login
+                      </button>
+                    </p>
+                  )}
+                </>
               )}
             </>
           )}

@@ -23,6 +23,7 @@ import {
   Mail,
   Check,
   X,
+  Banknote,
 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -114,7 +115,7 @@ export default function ProfilePage() {
 
   const onProfileSubmit = async (data: ProfileForm) => {
     try {
-      const response = await api.patch('/auth/profile', data);
+      const response = await api.patch('/users/me', data);
       updateUser(response.data);
       toast.success('Perfil atualizado com sucesso!');
       setIsEditingProfile(false);
@@ -125,7 +126,7 @@ export default function ProfilePage() {
 
   const onPasswordSubmit = async (data: PasswordForm) => {
     try {
-      await api.post('/auth/change-password', {
+      await api.post('/users/me/change-password', {
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
@@ -226,6 +227,16 @@ export default function ProfilePage() {
                 />
               </div>
 
+              <div>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Chave PIX para receber prêmios</label>
+                <Input
+                  {...profileForm.register('pixKey')}
+                  placeholder="CPF, email, telefone ou chave aleatória"
+                  disabled={profileForm.formState.isSubmitting}
+                />
+                <p className="text-xs text-gray-500 mt-1">Usada para receber o prêmio caso vença um bolão</p>
+              </div>
+
               <div className="flex gap-2 pt-1">
                 <Button
                   type="button"
@@ -262,6 +273,14 @@ export default function ProfilePage() {
                 <div className="py-3 border-b border-surface-light last:border-0">
                   <p className="text-xs text-gray-400 mb-0.5">Telefone</p>
                   <p className="text-sm text-gray-500 italic">Não informado</p>
+                </div>
+              )}
+              {user?.pixKey ? (
+                <InfoRow label="Chave PIX" value={user.pixKey} icon={Banknote} />
+              ) : (
+                <div className="py-3">
+                  <p className="text-xs text-gray-400 mb-0.5">Chave PIX</p>
+                  <p className="text-sm text-gray-500 italic">Não cadastrada — necessária para receber prêmios</p>
                 </div>
               )}
             </div>
