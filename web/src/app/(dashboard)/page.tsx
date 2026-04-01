@@ -9,6 +9,7 @@ import { PoolCard } from '@/components/shared/pool-card';
 import { FullPageSkeleton } from '@/components/shared/loading-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Trophy, Plus, TrendingUp } from 'lucide-react';
+import { NewFeatureBanner } from '@/components/shared/new-feature-banner';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -31,6 +32,16 @@ export default function DashboardPage() {
           Acompanhe seus bolões e atualize seus palpites
         </p>
       </div>
+
+      {/* New feature banner — aparece só 1x por usuário */}
+      <NewFeatureBanner
+        storageKey="feat_futebol_v1"
+        title="Página de Futebol ao vivo"
+        description="Acompanhe partidas e a tabela de classificação do Brasileirão, Champions League e muito mais — com atualização automática a cada minuto."
+        ctaLabel="Conferir agora"
+        ctaHref="/futebol"
+        icon={<TrendingUp className="w-5 h-5 text-brand-400" />}
+      />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
