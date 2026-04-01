@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Zap, BookOpen, TrendingUp } from 'lucide-react';
+import { Users, Zap, BookOpen, TrendingUp, Trophy } from 'lucide-react';
 
 const adminCards = [
+  { href: '/admin/pools', label: 'Bolões', icon: Trophy, description: 'Ver, fechar e finalizar todos os bolões' },
   { href: '/admin/teams', label: 'Times', icon: Users, description: 'Gerenciar times cadastrados' },
   { href: '/admin/championships', label: 'Campeonatos', icon: Zap, description: 'Gerenciar campeonatos' },
   { href: '/admin/matches', label: 'Partidas', icon: BookOpen, description: 'Gerenciar partidas e resultados' },

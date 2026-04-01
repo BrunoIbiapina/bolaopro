@@ -603,4 +603,55 @@ export class PoolsService {
       orderBy: { scheduledAt: 'asc' },
     });
   }
+
+  // ─── Admin-only methods ────────────────────────────────────────────────────
+
+  async listAllPoolsAdmin(filters?: { status?: string; search?: string }) {
+    const where: any = {};
+
+    if (filters?.status && filters.status !== 'ALL') {
+      where.status = filters.status;
+    }
+
+    if (filters?.search) {
+      where.OR = [
+        { name: { contains: filters.search, mode: 'insensitive' } },
+        { organizer: { fullName: { contains: filters.search, mode: 'insensitive' } } },
+        { championship: { name: { contains: filters.search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const pools = await this.prisma.pool.findMany({
+      where,
+      include: {
+        championship: { select: { id: true, name: true } },
+        organizer: { select: { id: true, fullName: true, email: true } },
+        _count: { select: { members: true, payments: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return pools.map((pool) => ({
+      ...pool,
+      memberCount: pool._count.members,
+      paymentCount: pool._count.payments,
+    }));
+  }
+
+  async updatePoolStatusAdmin(poolId: string, status: string) {
+    const allowed = ['OPEN', 'CLOSED', 'FINISHED'];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(`Status inválido. Use: ${allowed.join(', ')}`);
+    }
+
+    return this.prisma.pool.update({
+      where: { id: poolId },
+      data: { status: status as any },
+      include: {
+        championship: { select: { id: true, name: true } },
+        organizer: { select: { id: true, fullName: true, email: true } },
+        _count: { select: { members: true } },
+      },
+    });
+  }
 }

@@ -221,6 +221,52 @@ export function useLeavePool() {
   });
 }
 
+// ─── Admin hooks ─────────────────────────────────────────────────────────────
+
+export function useAdminPools(filters?: { status?: string; search?: string }) {
+  return useQuery({
+    queryKey: ['admin', 'pools', filters],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (filters?.status && filters.status !== 'ALL') params.status = filters.status;
+      if (filters?.search) params.search = filters.search;
+      const response = await api.get('/admin/pools', { params });
+      return response.data as Array<{
+        id: string;
+        name: string;
+        status: string;
+        entryFee: number;
+        maxParticipants: number;
+        memberCount: number;
+        paymentCount: number;
+        createdAt: string;
+        championship: { id: string; name: string } | null;
+        organizer: { id: string; fullName: string; email: string };
+      }>;
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminUpdatePoolStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ poolId, status }: { poolId: string; status: string }) => {
+      const response = await api.patch(`/admin/pools/${poolId}/status`, { status });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pools'] });
+      queryClient.invalidateQueries({ queryKey: ['pools'] });
+      toast.success('Status do bolão atualizado!');
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message;
+      toast.error(msg || 'Erro ao atualizar status');
+    },
+  });
+}
+
 export function usePrizeInfo(poolId: string) {
   return useQuery({
     queryKey: ['pools', poolId, 'prize'],
