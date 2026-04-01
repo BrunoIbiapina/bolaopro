@@ -478,30 +478,38 @@ export class PoolsService {
     return { ...await this.getPoolById(pool.id), numCotas: cotas, totalAmount: pool.entryFee * cotas };
   }
 
-  async getPrizeInfo(poolId: string, _userId: string) {
+  async getPrizeInfo(poolId: string, userId: string) {
     const pool = await this.getPoolById(poolId);
     const confirmedMembers = await (this.prisma.poolMember.findMany as any)({
       where: { poolId, status: 'CONFIRMED' },
       include: { user: { select: { id: true, fullName: true, avatar: true } } },
     }) as any[];
-    const totalCotas = confirmedMembers.reduce((sum, m) => sum + m.numCotas, 0);
-    const totalPrize = totalCotas * pool.entryFee;
-    const cotasPerParticipant = pool.cotasPerParticipant;
+    const totalCotas = confirmedMembers.reduce((sum: number, m: any) => sum + (m.numCotas ?? 1), 0);
+    const totalPot = totalCotas * (pool.entryFee ?? 0);
+
+    // Buscar membro atual (qualquer status) para myStatus e myContribution
+    const myMember = await this.prisma.poolMember.findUnique({
+      where: { poolId_userId: { poolId, userId } },
+    });
+    const myCotas = (myMember as any)?.numCotas ?? 1;
+    const myContribution = myCotas * (pool.entryFee ?? 0);
+    const myStatus = myMember?.status ?? null;
+
     return {
-      totalPrize,
+      totalPot,
       totalCotas,
-      confirmedCount: confirmedMembers.length,
-      entryFee: pool.entryFee,
-      cotasPerParticipant,
-      poolStatus: pool.status,
-      members: confirmedMembers.map((m) => ({
+      confirmedMembers: confirmedMembers.length,
+      entryFee: pool.entryFee ?? 0,
+      myContribution,
+      potentialWinIfAlone: totalPot,
+      myStatus,
+      members: confirmedMembers.map((m: any) => ({
         userId: m.userId,
         fullName: (m.user as any).fullName,
         avatar: (m.user as any).avatar,
-        pixKey: null, // pixKey não existe no model User — campo removido
         numCotas: m.numCotas,
-        prizePaid: (m as any).prizePaid ?? false,
-        prizeAmount: (m as any).prizeAmount ?? null,
+        prizePaid: m.prizePaid ?? false,
+        prizeAmount: m.prizeAmount ?? null,
       })),
     };
   }
