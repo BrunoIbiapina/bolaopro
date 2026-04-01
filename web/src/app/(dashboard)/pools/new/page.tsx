@@ -798,26 +798,13 @@ export default function NewPoolPage() {
                   />
                 </div>
 
-                {/* Chave PIX — só aparece para admin em bolões pagos */}
-                {isAdmin && (form.watch('entryFee') ?? 0) > 0 && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-50 block mb-1">Chave PIX para recebimento</label>
-                    <p className="text-xs text-gray-500 mb-2">Os participantes verão o QR Code gerado com esta chave ao pagar. Caso não informe, será usada a chave padrão do sistema.</p>
-                    <Input
-                      placeholder="CPF, CNPJ, e-mail, celular ou chave aleatória"
-                      {...form.register('pixKey')}
-                      disabled={isPending}
-                    />
-                  </div>
-                )}
-
-                {/* Info: usuário comum — pagamentos vão para a chave do sistema */}
-                {!isAdmin && (form.watch('entryFee') ?? 0) > 0 && (
+                {/* Info: pagamentos vão para a chave PIX fixa do sistema */}
+                {(form.watch('entryFee') ?? 0) > 0 && (
                   <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 flex items-start gap-3">
                     <Info className="h-4 w-4 text-brand-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-brand-300">Pagamentos via PIX do sistema</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Os participantes receberão a chave PIX do sistema para realizar o pagamento. Você não precisa informar uma chave.</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Os participantes receberão a chave PIX do sistema para realizar o pagamento.</p>
                     </div>
                   </div>
                 )}

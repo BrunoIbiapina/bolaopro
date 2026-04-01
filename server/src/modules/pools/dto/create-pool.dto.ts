@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsArray, Min, IsNotEmpty } from 'class-validator';
 
 export class CreatePoolDto {
   @IsString()
@@ -21,6 +21,23 @@ export class CreatePoolDto {
   maxParticipants!: number;
 
   @IsOptional()
+  @IsNumber()
+  cotasPerParticipant?: number;
+
+  @IsOptional()
+  @IsNumber()
+  organizerCotas?: number;
+
+  @IsOptional()
   @IsString()
   rules?: string;
+
+  @IsOptional()
+  @IsString()
+  pixKey?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  matchIds?: string[];
 }

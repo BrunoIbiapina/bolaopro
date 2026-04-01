@@ -33,7 +33,9 @@ export class PoolsService {
         championshipId: createPoolDto.championshipId,
         entryFee: createPoolDto.entryFee,
         maxParticipants: createPoolDto.maxParticipants,
+        cotasPerParticipant: createPoolDto.cotasPerParticipant ?? 1,
         rules: createPoolDto.rules,
+        pixKey: createPoolDto.pixKey,
         inviteCode,
         status: 'OPEN',
       },
@@ -52,11 +54,23 @@ export class PoolsService {
       },
     });
 
-    const organizer = await this.prisma.poolMember.create({
+    // Associar partidas selecionadas ao bolão
+    if (createPoolDto.matchIds && createPoolDto.matchIds.length > 0) {
+      await this.prisma.poolMatch.createMany({
+        data: createPoolDto.matchIds.map((matchId) => ({
+          poolId: pool.id,
+          matchId,
+        })),
+      });
+    }
+
+    // Adicionar organizador como membro
+    await this.prisma.poolMember.create({
       data: {
         poolId: pool.id,
         userId: organizerId,
         status: 'CONFIRMED',
+        numCotas: createPoolDto.organizerCotas ?? 1,
       },
     });
 
