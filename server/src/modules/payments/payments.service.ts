@@ -61,7 +61,9 @@ export class PaymentsService {
       entryFee: pool.entryFee,
       numCotas,
       totalAmount,
-      paymentStatus: payment?.status ?? (pool.entryFee === 0 ? 'PAID' : 'NOT_REQUESTED'),
+      paymentStatus: payment?.status === 'PAID' ? 'PAID'
+        : member.status === 'CONFIRMED' ? 'PAID'
+        : payment?.status ?? (pool.entryFee === 0 ? 'PAID' : 'NOT_REQUESTED'),
       paymentId: payment?.id || null,
       paidAt: payment?.paidAt || null,
       pixPayload: payment?.pixPayload ?? null,
