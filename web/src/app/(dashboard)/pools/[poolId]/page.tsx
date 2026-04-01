@@ -1381,27 +1381,16 @@ function PaymentTab({
                 </div>
               )}
 
-              {/* Organizador PENDING — pode auto-confirmar (ele controla os pagamentos do bolão) */}
-              {isOrganizer && !isPaid && myMember?.status === 'PENDING' && (
-                <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 space-y-3">
-                  <div className="flex items-start gap-2.5">
-                    <Banknote className="h-4 w-4 text-brand-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-brand-300">Confirme sua própria participação</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Como organizador, você controla o bolão. Após realizar seu pagamento, clique abaixo para confirmar sua entrada.
-                      </p>
-                    </div>
+              {/* PENDING — aguardando confirmação do admin do sistema */}
+              {!isPaid && myMember?.status === 'PENDING' && (
+                <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex items-start gap-2.5">
+                  <Clock className="h-4 w-4 text-yellow-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-yellow-300">Aguardando confirmação</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Após realizar o pagamento via PIX, o administrador irá confirmar sua participação.
+                    </p>
                   </div>
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => updateMember({ poolId, memberId: myMember.userId, status: 'CONFIRMED' })}
-                    disabled={confirmingOwn}
-                  >
-                    {confirmingOwn
-                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Confirmando...</>
-                      : <><CheckCircle2 className="h-4 w-4" /> Confirmar minha participação</>}
-                  </Button>
                 </div>
               )}
 
@@ -1928,8 +1917,8 @@ function RankingTab({ poolId, userId }: { poolId: string; userId: string }) {
 }
 
 // ─── Members Tab ─────────────────────────────────────────────────────────────
-function MembersTab({ poolId, members, isOrganizer, currentUserId }: {
-  poolId: string; members: any[]; isOrganizer: boolean; currentUserId: string;
+function MembersTab({ poolId, members, isOrganizer, isAdmin, currentUserId }: {
+  poolId: string; members: any[]; isOrganizer: boolean; isAdmin?: boolean; currentUserId: string;
 }) {
   const { mutate: updateMember, isPending: updating } = useUpdateMemberStatus();
 
@@ -1939,11 +1928,13 @@ function MembersTab({ poolId, members, isOrganizer, currentUserId }: {
 
   const pendingMembers = members.filter((m) => m.status === 'PENDING');
   const confirmedMembers = members.filter((m) => m.status === 'CONFIRMED');
+  // Apenas o admin do sistema pode confirmar/rejeitar pagamentos
+  const canConfirm = isAdmin;
 
   return (
     <div className="space-y-4">
-      {/* Pendentes — destaque para o organizador confirmar */}
-      {isOrganizer && pendingMembers.length > 0 && (
+      {/* Pendentes — visível para todos, botões só para admin */}
+      {pendingMembers.length > 0 && (
         <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-yellow-500/10">
             <Clock className="size-4 text-yellow-400 shrink-0" />
@@ -1963,25 +1954,27 @@ function MembersTab({ poolId, members, isOrganizer, currentUserId }: {
                 {m.user.pixKey && (
                   <span className="text-xs text-gray-500 hidden sm:block truncate max-w-[100px]">{m.user.pixKey}</span>
                 )}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    size="sm"
-                    className="h-7 px-2.5 text-xs bg-green-600 hover:bg-green-500 text-white"
-                    disabled={updating}
-                    onClick={() => updateMember({ poolId, memberId: m.userId, status: 'CONFIRMED' })}
-                  >
-                    <CheckCircle2 className="size-3 mr-1" />Confirmar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    disabled={updating}
-                    onClick={() => updateMember({ poolId, memberId: m.userId, status: 'REJECTED' })}
-                  >
-                    Rejeitar
-                  </Button>
-                </div>
+                {canConfirm && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Button
+                      size="sm"
+                      className="h-7 px-2.5 text-xs bg-green-600 hover:bg-green-500 text-white"
+                      disabled={updating}
+                      onClick={() => updateMember({ poolId, memberId: m.userId, status: 'CONFIRMED' })}
+                    >
+                      <CheckCircle2 className="size-3 mr-1" />Confirmar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      disabled={updating}
+                      onClick={() => updateMember({ poolId, memberId: m.userId, status: 'REJECTED' })}
+                    >
+                      Rejeitar
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -2020,27 +2013,6 @@ function MembersTab({ poolId, members, isOrganizer, currentUserId }: {
         </CardContent>
       </Card>
 
-      {/* Pendentes para não-organizadores */}
-      {!isOrganizer && pendingMembers.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-sm text-gray-400 font-normal">
-            Aguardando confirmação ({pendingMembers.length})
-          </CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {pendingMembers.map((m: any) => (
-                <div key={m.userId} className="flex items-center justify-between p-3 rounded-lg bg-surface/40 opacity-70">
-                  <div className="flex items-center gap-3">
-                    <AvatarWithInitials name={m.user.fullName} src={m.user.avatar} />
-                    <p className="text-sm text-gray-300">{m.user.fullName}</p>
-                  </div>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">⏳ Pendente</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
@@ -2202,7 +2174,7 @@ return (
         </TabsContent>
 
         <TabsContent value="members" className="mt-4">
-          <MembersTab poolId={poolId} members={members ?? []} isOrganizer={isOrganizer} currentUserId={user?.id ?? ''} />
+          <MembersTab poolId={poolId} members={members ?? []} isOrganizer={isOrganizer} isAdmin={user?.role === UserRole.ADMIN} currentUserId={user?.id ?? ''} />
         </TabsContent>
       </Tabs>
 

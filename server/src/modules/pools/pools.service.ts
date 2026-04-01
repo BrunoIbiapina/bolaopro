@@ -72,7 +72,7 @@ export class PoolsService {
         data: {
           poolId: pool.id,
           userId: organizerId,
-          status: 'CONFIRMED',
+          status: 'PENDING',
           numCotas: createPoolDto.organizerCotas ?? 1,
         },
       });
