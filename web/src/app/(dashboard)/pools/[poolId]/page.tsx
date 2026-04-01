@@ -27,10 +27,17 @@ import { UserRole } from '@/types';
 function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled: boolean }) {
   return (
     <input
-      type="number" min={0} max={99}
-      value={value} onChange={(e) => onChange(e.target.value)}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={2}
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value.replace(/[^0-9]/g, '');
+        onChange(v);
+      }}
       disabled={disabled}
-      className="w-12 h-10 text-center text-lg font-bold rounded-lg border border-surface-lighter bg-surface/80 text-gray-50 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+      className="w-12 h-10 text-center text-lg font-bold rounded-lg border border-surface-lighter bg-surface/80 text-gray-50 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-inset focus:ring-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
     />
   );
 }
@@ -1873,7 +1880,7 @@ export default function PoolDetailsPage() {
   const isConfirmed = myMember?.status === 'CONFIRMED';
 
 return (
-    <div className="space-y-5">
+    <div className="space-y-5 overflow-x-hidden">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
