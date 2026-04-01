@@ -14,7 +14,7 @@ import { nanoid } from 'nanoid';
 export class PoolsService {
   constructor(private prisma: PrismaService) {}
 
-  async createPool(organizerId: string, createPoolDto: CreatePoolDto) {
+  async createPool(organizerId: string, createPoolDto: CreatePoolDto, role?: string) {
     const championship = await this.prisma.championship.findUnique({
       where: { id: createPoolDto.championshipId },
     });
@@ -64,19 +64,21 @@ export class PoolsService {
       });
     }
 
-    // Adicionar organizador como membro
-    await this.prisma.poolMember.create({
-      data: {
-        poolId: pool.id,
-        userId: organizerId,
-        status: 'CONFIRMED',
-        numCotas: createPoolDto.organizerCotas ?? 1,
-      },
-    });
+    // Adicionar organizador como membro (apenas se NÃO for admin)
+    if (role !== 'ADMIN') {
+      await this.prisma.poolMember.create({
+        data: {
+          poolId: pool.id,
+          userId: organizerId,
+          status: 'CONFIRMED',
+          numCotas: createPoolDto.organizerCotas ?? 1,
+        },
+      });
+    }
 
     return {
       ...pool,
-      memberCount: 1,
+      memberCount: role !== 'ADMIN' ? 1 : 0,
     };
   }
 

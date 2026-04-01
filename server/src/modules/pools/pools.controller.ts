@@ -31,7 +31,7 @@ export class PoolsController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new pool' })
   createPool(@CurrentUser() user: JwtPayload, @Body() createPoolDto: CreatePoolDto) {
-    return this.poolsService.createPool(user.id, createPoolDto);
+    return this.poolsService.createPool(user.id, createPoolDto, user.role);
   }
 
   @Get()
