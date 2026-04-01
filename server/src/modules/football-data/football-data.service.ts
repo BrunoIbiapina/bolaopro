@@ -97,4 +97,34 @@ export class FootballDataService {
       return null;
     }
   }
+
+  async getStandings(code: string): Promise<any> {
+    const client = this.getClient();
+    try {
+      const response = await client.get(`/competitions/${code}/standings`);
+      return response.data;
+    } catch (err: any) {
+      this.logger.error(`Erro ao buscar classificação de ${code}: ${err?.message}`);
+      throw new Error(err?.response?.data?.message || 'Erro ao buscar classificação');
+    }
+  }
+
+  async getUpcomingMatches(code: string): Promise<ApiMatch[]> {
+    const client = this.getClient();
+    try {
+      // Próximos 7 dias
+      const dateFrom = new Date();
+      const dateTo = new Date();
+      dateTo.setDate(dateTo.getDate() + 7);
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+      const response = await client.get(`/competitions/${code}/matches`, {
+        params: { dateFrom: fmt(dateFrom), dateTo: fmt(dateTo) },
+      });
+      return (response.data.matches as ApiMatch[]) ?? [];
+    } catch (err: any) {
+      this.logger.error(`Erro ao buscar próximas partidas de ${code}: ${err?.message}`);
+      return [];
+    }
+  }
 }

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 const MAIN_ROUTES = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/pools', label: 'Meus Bolões', icon: Trophy },
+  { href: '/futebol', label: 'Futebol', icon: TrendingUp },
   { href: '/notifications', label: 'Notificações', icon: Bell },
   { href: '/profile', label: 'Perfil', icon: Settings },
 ];

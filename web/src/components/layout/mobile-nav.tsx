@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   Trophy,
-  Zap,
+  TrendingUp,
   Bell,
   User,
 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 const ROUTES = [
   { href: '/', label: 'Início', icon: Home },
   { href: '/pools', label: 'Bolões', icon: Trophy },
+  { href: '/futebol', label: 'Futebol', icon: TrendingUp },
   { href: '/notifications', label: 'Alertas', icon: Bell },
   { href: '/profile', label: 'Perfil', icon: User },
 ];

@@ -64,6 +64,43 @@ export function useFdMatches(code: string, status?: 'SCHEDULED' | 'LIVE' | 'FINI
   });
 }
 
+// ── Public endpoints (any authenticated user) ──────────────────────────────
+
+export function usePublicCompetitions() {
+  return useQuery({
+    queryKey: ['public-fd-competitions'],
+    queryFn: async () => {
+      const response = await api.get<FdCompetition[]>('/futebol/competitions');
+      return response.data;
+    },
+    staleTime: Infinity,
+  });
+}
+
+export function usePublicMatches(code: string) {
+  return useQuery({
+    queryKey: ['public-fd-matches', code],
+    queryFn: async () => {
+      const response = await api.get<FdMatch[]>(`/futebol/competitions/${code}/matches`);
+      return response.data;
+    },
+    enabled: !!code,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function usePublicStandings(code: string) {
+  return useQuery({
+    queryKey: ['public-fd-standings', code],
+    queryFn: async () => {
+      const response = await api.get(`/futebol/competitions/${code}/standings`);
+      return response.data;
+    },
+    enabled: !!code,
+    staleTime: 1000 * 60 * 30, // 30 min — tabela não muda tão rápido
+  });
+}
+
 export function useImportMatch() {
   const queryClient = useQueryClient();
   return useMutation({
