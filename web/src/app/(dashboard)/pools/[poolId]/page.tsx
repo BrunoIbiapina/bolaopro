@@ -264,6 +264,129 @@ function MyResultsSection({ poolId, userId }: { poolId: string; userId: string }
   );
 }
 
+// ─── Matches Section ─────────────────────────────────────────────────────────
+// Mostra todas as partidas do bolão com times, horário e placar (quando disponível)
+function MatchesSection({ poolId, isAdmin, championshipId }: { poolId: string; isAdmin: boolean; championshipId?: string }) {
+  const { data: matches, isLoading } = usePoolMatches(poolId);
+
+  if (isLoading) return null;
+
+  const now = new Date();
+  const lockThreshold = 15 * 60 * 1000;
+
+  // Empty state
+  if (!matches || matches.length === 0) {
+    return (
+      <div className="rounded-xl border border-surface-lighter bg-surface/30 p-5 text-center space-y-3">
+        <div className="size-12 rounded-2xl bg-gray-800 flex items-center justify-center mx-auto">
+          <span className="text-2xl">⚽</span>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-300">Nenhuma partida cadastrada</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isAdmin
+              ? 'Cadastre as partidas para que os participantes possam fazer seus palpites.'
+              : 'O administrador ainda não cadastrou as partidas deste bolão.'}
+          </p>
+        </div>
+        {isAdmin && championshipId && (
+          <Link
+            href={`/admin/matches?championship=${championshipId}&fromPool=${poolId}`}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
+          >
+            <ExternalLink className="size-3" />
+            Cadastrar partidas agora
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+        <Trophy className="size-3.5" />
+        Partidas do bolão ({matches.length})
+      </p>
+      <div className="rounded-xl border border-surface-lighter overflow-hidden divide-y divide-surface-lighter">
+        {matches.map((match: any) => {
+          const isFinished = match.status === 'FINISHED';
+          const isLive     = match.status === 'LIVE';
+          const hasScore   = isFinished && match.homeScoreResult !== null && match.homeScoreResult !== undefined;
+          const isLocked   = !isFinished && !isLive &&
+            now.getTime() > new Date(match.scheduledAt).getTime() - lockThreshold;
+
+          return (
+            <div key={match.id} className="flex items-center gap-2 px-3 py-3 bg-surface/30 hover:bg-surface/50 transition-colors">
+              {/* Status / data */}
+              <div className="w-14 shrink-0 text-center">
+                {isLive ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400 text-[10px] font-bold">
+                    <span className="size-1.5 rounded-full bg-red-400 animate-pulse" />
+                    AO VIVO
+                  </span>
+                ) : isFinished ? (
+                  <span className="text-[10px] text-gray-500 font-medium">Encerrado</span>
+                ) : (
+                  <span className="text-[10px] text-gray-500 leading-tight text-center block">
+                    {format(new Date(match.scheduledAt), "dd/MM\nHH:mm", { locale: ptBR })}
+                  </span>
+                )}
+              </div>
+
+              {/* Home team */}
+              <div className="flex items-center gap-1.5 flex-1 justify-end min-w-0">
+                <span className={`text-xs font-semibold truncate text-right ${isFinished ? 'text-gray-300' : 'text-gray-100'}`}>
+                  {match.homeTeam?.name}
+                </span>
+                {match.homeTeam?.logo ? (
+                  <img src={match.homeTeam.logo} alt="" className="size-6 object-contain shrink-0" />
+                ) : (
+                  <div className="size-6 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
+                    <span className="text-[9px] font-bold text-gray-300">{match.homeTeam?.code?.slice(0, 3)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Placar ou vs */}
+              <div className="w-14 shrink-0 text-center">
+                {hasScore ? (
+                  <span className="text-sm font-extrabold text-white tabular-nums">
+                    {match.homeScoreResult} <span className="text-gray-500">×</span> {match.awayScoreResult}
+                  </span>
+                ) : isLive && match.homeScoreResult !== null && match.homeScoreResult !== undefined ? (
+                  <span className="text-sm font-extrabold text-red-300 tabular-nums">
+                    {match.homeScoreResult} <span className="text-gray-500">×</span> {match.awayScoreResult}
+                  </span>
+                ) : (
+                  <div className="flex items-center justify-center gap-1">
+                    {isLocked && <Lock className="size-3 text-gray-600" />}
+                    {!isLocked && <span className="text-xs text-gray-600">×</span>}
+                  </div>
+                )}
+              </div>
+
+              {/* Away team */}
+              <div className="flex items-center gap-1.5 flex-1 justify-start min-w-0">
+                {match.awayTeam?.logo ? (
+                  <img src={match.awayTeam.logo} alt="" className="size-6 object-contain shrink-0" />
+                ) : (
+                  <div className="size-6 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
+                    <span className="text-[9px] font-bold text-gray-300">{match.awayTeam?.code?.slice(0, 3)}</span>
+                  </div>
+                )}
+                <span className={`text-xs font-semibold truncate ${isFinished ? 'text-gray-300' : 'text-gray-100'}`}>
+                  {match.awayTeam?.name}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Live Dashboard ───────────────────────────────────────────────────────────
 function LiveDashboard({ poolId, userId }: { poolId: string; userId: string }) {
   const { data: matches } = usePoolMatches(poolId);
@@ -1952,6 +2075,13 @@ return (
 
       {/* Meus Resultados — só mostra se confirmado e há partidas encerradas e bolão não finalizado */}
       {user && isConfirmed && pool.status !== 'FINISHED' && <MyResultsSection poolId={poolId} userId={user.id} />}
+
+      {/* Partidas do bolão — sempre visível, mostra placar quando disponível */}
+      <MatchesSection
+        poolId={poolId}
+        isAdmin={user?.role === UserRole.ADMIN}
+        championshipId={(pool as any).championshipId}
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
