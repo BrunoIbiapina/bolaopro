@@ -41,22 +41,60 @@ function LoadingScreen() {
 
 // ─── Error screen ──────────────────────────────────────────────────────────────
 function ErrorScreen({ message, onHome }: { message: string; onHome: () => void }) {
+  const isNotFound = /not found|não encontrado|inválido|expirado/i.test(message);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-950 via-gray-900 to-gray-950 px-4">
-      <div className="max-w-sm w-full text-center space-y-6">
-        <div className="size-20 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
-          <AlertTriangle className="size-9 text-red-400" />
+    <div className="min-h-screen bg-gradient-to-br from-brand-950 via-gray-900 to-gray-950 flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm space-y-0">
+
+        {/* Header card */}
+        <div className="rounded-t-3xl bg-gradient-to-br from-gray-800/60 to-gray-900/60 border border-gray-700/40 p-8 text-center space-y-5">
+          {/* Ícone */}
+          <div className="flex justify-center">
+            <div className="size-20 rounded-2xl bg-gray-800 border border-gray-700/60 flex items-center justify-center shadow-lg">
+              <span className="text-4xl">{isNotFound ? '🔍' : '⚠️'}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+              {isNotFound ? 'Bolão não encontrado' : 'Link indisponível'}
+            </p>
+            <h1 className="text-2xl font-extrabold text-white leading-tight">
+              {isNotFound ? 'Este bolão não existe mais' : 'Algo deu errado'}
+            </h1>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              {isNotFound
+                ? 'O link de convite pode ter expirado, o bolão foi encerrado ou removido pelo organizador.'
+                : message}
+            </p>
+          </div>
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold text-gray-100">Link inválido</h2>
-          <p className="text-sm text-gray-400">{message}</p>
+
+        {/* Info card */}
+        <div className="bg-gray-900/80 backdrop-blur border-x border-gray-700/20 px-6 py-5">
+          <div className="rounded-xl bg-gray-800/50 border border-gray-700/30 px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="size-4 text-yellow-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Se você recebeu este link de alguém, peça para essa pessoa compartilhar um novo convite atualizado.
+            </p>
+          </div>
         </div>
-        <button
-          onClick={onHome}
-          className="w-full py-3 px-6 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-colors"
-        >
-          Ir para a plataforma
-        </button>
+
+        {/* CTA */}
+        <div className="rounded-b-3xl bg-gray-900/90 border border-gray-700/20 border-t-0 px-6 pb-8 pt-5 space-y-3">
+          <button
+            onClick={onHome}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white font-bold text-base shadow-lg shadow-brand-900/50 transition-all"
+          >
+            <span className="text-xl">⚽</span>
+            Ver outros bolões
+          </button>
+          <p className="text-center text-xs text-gray-600 pt-1">
+            Powered by <span className="text-brand-500 font-semibold">Bolão Pro</span>
+          </p>
+        </div>
+
       </div>
     </div>
   );
