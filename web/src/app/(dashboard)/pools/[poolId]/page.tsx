@@ -777,24 +777,24 @@ function PredictionsTab({ poolId, member }: { poolId: string; member: any }) {
               </p>
             </div>
             <div className="flex items-center gap-1">
+              {/* Excluir só para PENDING (confirmados não podem cancelar palpites) */}
               {!isConfirmed && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                    onClick={() => setShowCancelConfirm(true)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    Excluir
-                  </Button>
-                  {open.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                      Editar
-                    </Button>
-                  )}
-                </>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  onClick={() => setShowCancelConfirm(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Excluir
+                </Button>
+              )}
+              {/* Editar disponível para todos enquanto houver partidas abertas */}
+              {open.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setEditMode(true)}>
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Editar
+                </Button>
               )}
             </div>
           </div>
@@ -849,18 +849,27 @@ function PredictionsTab({ poolId, member }: { poolId: string; member: any }) {
         </div>
       )}
 
-      {/* Aviso de palpites travados para pagamento confirmado */}
-      {isConfirmed && hasSavedPredictions && (
+      {/* Info: pagamento confirmado e ainda há partidas abertas para palpitar */}
+      {isConfirmed && open.length > 0 && (
         <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 flex items-start gap-2.5">
           <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
           <p className="text-xs text-green-300 leading-relaxed">
-            Pagamento confirmado — seus palpites estão registrados e não podem mais ser alterados.
+            Pagamento confirmado ✓ — você pode palpitar até 15 minutos antes de cada partida.
+          </p>
+        </div>
+      )}
+      {/* Info: todas as partidas já estão encerradas/bloqueadas */}
+      {isConfirmed && open.length === 0 && hasSavedPredictions && (
+        <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 flex items-start gap-2.5">
+          <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-green-300 leading-relaxed">
+            Palpites registrados — o prazo para alterações foi encerrado.
           </p>
         </div>
       )}
 
-      {/* Partidas abertas para palpite */}
-      {open.length > 0 && !isConfirmed && (!hasSavedPredictions || hasDirtyPredictions || editMode) && (
+      {/* Partidas abertas para palpite — disponível para PENDING e CONFIRMED */}
+      {open.length > 0 && (!hasSavedPredictions || hasDirtyPredictions || editMode) && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Próximas partidas</p>
           {open.map((m: any) => {
@@ -1110,8 +1119,8 @@ function GroupPredictionsTab({ poolId, userId }: { poolId: string; userId: strin
 
 // ─── Payment Tab ──────────────────────────────────────────────────────────────
 function PaymentTab({
-  poolId, isOrganizer, myMember,
-}: { poolId: string; isOrganizer: boolean; myMember: any }) {
+  poolId, isOrganizer, myMember, isAdmin,
+}: { poolId: string; isOrganizer: boolean; myMember: any; isAdmin?: boolean }) {
   const router = useRouter();
   const { data: payment, isLoading } = usePaymentStatus(poolId);
   const { mutate: generate, isPending: generating } = useGeneratePayment();
@@ -1133,6 +1142,8 @@ function PaymentTab({
   const isFree = payment.entryFee === 0;
   const isPendingMember = myMember?.status === 'PENDING';
   const canCancel = !isOrganizer && isPendingMember;
+  // Admin que foi adicionado incorretamente como membro pode se remover
+  const canLeaveAsAdmin = isAdmin && isOrganizer && !!myMember && payment.paymentStatus !== 'NOT_MEMBER';
 
   // Payload PIX vem do backend (status ou generate response)
   const activePixPayload = pixData?.payload ?? payment.pixPayload;
@@ -1398,6 +1409,29 @@ function PaymentTab({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin removendo participação indevida */}
+      {canLeaveAsAdmin && (
+        <Card className="border-yellow-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-yellow-300">Sua participação como admin</p>
+                <p className="text-xs text-gray-500 mt-0.5">Você foi adicionado antes do fix. Remova para não contar como participante.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 shrink-0"
+                disabled={leaving}
+                onClick={handleCancel}
+              >
+                {leaving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Me remover'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -1954,7 +1988,7 @@ return (
         </TabsContent>
 
         <TabsContent value="payment" className="mt-4">
-          <PaymentTab poolId={poolId} isOrganizer={isOrganizer} myMember={myMember} />
+          <PaymentTab poolId={poolId} isOrganizer={isOrganizer} myMember={myMember} isAdmin={user?.role === UserRole.ADMIN} />
         </TabsContent>
 
         <TabsContent value="ranking" className="mt-4">

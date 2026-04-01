@@ -333,8 +333,13 @@ export class PoolsService {
   async leavePool(poolId: string, userId: string) {
     const pool = await this.getPoolById(poolId);
 
+    // Organizador não pode sair, a menos que seja ADMIN removendo
+    // a própria participação indevida (criada antes do fix)
     if (pool.organizerId === userId) {
-      throw new BadRequestException('Pool organizer cannot leave the pool');
+      const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (user?.role !== 'ADMIN') {
+        throw new BadRequestException('Pool organizer cannot leave the pool');
+      }
     }
 
     const member = await this.prisma.poolMember.findUnique({
