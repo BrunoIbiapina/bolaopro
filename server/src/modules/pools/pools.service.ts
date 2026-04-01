@@ -64,8 +64,9 @@ export class PoolsService {
       });
     }
 
-    // Adicionar organizador como membro (apenas se NÃO for admin)
-    if (role !== 'ADMIN') {
+    // Adicionar organizador como membro apenas se quiser participar (organizerCotas > 0)
+    const organizerParticipates = role !== 'ADMIN' && (createPoolDto.organizerCotas ?? 1) > 0;
+    if (organizerParticipates) {
       await this.prisma.poolMember.create({
         data: {
           poolId: pool.id,
@@ -78,7 +79,7 @@ export class PoolsService {
 
     return {
       ...pool,
-      memberCount: role !== 'ADMIN' ? 1 : 0,
+      memberCount: organizerParticipates ? 1 : 0,
     };
   }
 

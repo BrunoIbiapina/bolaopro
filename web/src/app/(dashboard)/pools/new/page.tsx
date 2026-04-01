@@ -29,7 +29,7 @@ const schema = z.object({
   entryFee: z.coerce.number().min(0, 'Taxa deve ser positiva'),
   maxParticipants: z.coerce.number().min(2, 'Mínimo 2 participantes').max(100),
   cotasPerParticipant: z.coerce.number().min(1).max(10).default(1),
-  organizerCotas: z.coerce.number().min(1).max(10).default(1),
+  organizerCotas: z.coerce.number().min(0).max(10).default(1),
   rules: z.string().optional(),
   pixKey: z.string().optional(),
 });
@@ -366,36 +366,85 @@ export default function NewPoolPage() {
                   </div>
                 </div>
 
-                {/* Cotas do organizador — oculto para admin (não é adicionado como membro) */}
-                {!isAdmin && <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4 space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-yellow-300">Quantas cotas você quer participar?</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Cada cota = uma cartela de palpites separada</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {Array.from({ length: Number(form.watch('cotasPerParticipant') || 1) }, (_, i) => i + 1).map((n) => {
-                      const val = Number(form.watch('organizerCotas') || 1);
-                      return (
-                        <button key={n} type="button"
-                          onClick={() => form.setValue('organizerCotas', n)}
-                          className={`flex-1 rounded-lg border py-2.5 text-sm font-bold transition-colors ${
-                            val === n ? 'border-yellow-500 bg-yellow-600/20 text-yellow-300' : 'border-surface-lighter text-gray-400 hover:border-yellow-500/50'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {Number(form.watch('entryFee') || 0) > 0 && (
-                    <p className="text-xs text-gray-400 text-center">
-                      Sua participação: <span className="text-yellow-300 font-semibold">
-                        R$ {(Number(form.watch('entryFee') || 0) * Number(form.watch('organizerCotas') || 1)).toFixed(2)}
-                      </span>
-                      {' '}({Number(form.watch('organizerCotas') || 1)}× R$ {Number(form.watch('entryFee') || 0).toFixed(2)})
-                    </p>
-                  )}
-                </div>}
+                {/* Participação do organizador — oculto para admin */}
+                {!isAdmin && (() => {
+                  const wantsToParticipate = Number(form.watch('organizerCotas') ?? 1) > 0;
+                  return (
+                    <div className="space-y-3">
+                      {/* Pergunta: participar ou só criar? */}
+                      <div>
+                        <p className="text-sm font-medium text-gray-50 mb-2">Você quer participar do bolão?</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => form.setValue('organizerCotas', 1)}
+                            className={`rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                              wantsToParticipate
+                                ? 'border-brand-500 bg-brand-600/20 text-brand-300'
+                                : 'border-surface-lighter text-gray-400 hover:border-gray-500'
+                            }`}
+                          >
+                            <span>⚽</span> Sim, quero participar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => form.setValue('organizerCotas', 0)}
+                            className={`rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                              !wantsToParticipate
+                                ? 'border-gray-500 bg-gray-700/30 text-gray-200'
+                                : 'border-surface-lighter text-gray-400 hover:border-gray-500'
+                            }`}
+                          >
+                            <span>🛠️</span> Só criar o bolão
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Quantidade de cotas — só aparece se quiser participar */}
+                      {wantsToParticipate && (
+                        <div className="rounded-xl border border-brand-500/20 bg-brand-500/5 p-4 space-y-3">
+                          <div>
+                            <p className="text-sm font-semibold text-brand-300">Quantas cotas você quer?</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Cada cota = uma cartela de palpites separada</p>
+                          </div>
+                          <div className="flex gap-2">
+                            {Array.from({ length: Number(form.watch('cotasPerParticipant') || 1) }, (_, i) => i + 1).map((n) => {
+                              const val = Number(form.watch('organizerCotas') || 1);
+                              return (
+                                <button key={n} type="button"
+                                  onClick={() => form.setValue('organizerCotas', n)}
+                                  className={`flex-1 rounded-lg border py-2.5 text-sm font-bold transition-colors ${
+                                    val === n ? 'border-brand-500 bg-brand-600/20 text-brand-300' : 'border-surface-lighter text-gray-400 hover:border-brand-500/50'
+                                  }`}
+                                >
+                                  {n}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {Number(form.watch('entryFee') || 0) > 0 && (
+                            <p className="text-xs text-gray-400 text-center">
+                              Sua entrada: <span className="text-brand-300 font-semibold">
+                                R$ {(Number(form.watch('entryFee') || 0) * Number(form.watch('organizerCotas') || 1)).toFixed(2)}
+                              </span>
+                              {' '}({Number(form.watch('organizerCotas') || 1)}× R$ {Number(form.watch('entryFee') || 0).toFixed(2)})
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Aviso quando escolhe "só criar" */}
+                      {!wantsToParticipate && (
+                        <div className="rounded-xl border border-gray-600/30 bg-gray-800/30 px-4 py-3 flex items-start gap-2.5">
+                          <span className="text-base shrink-0 mt-0.5">ℹ️</span>
+                          <p className="text-xs text-gray-400 leading-relaxed">
+                            Você será o organizador mas não participará. Poderá entrar no bolão depois pelo link de convite.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex gap-3 justify-end">
                   <Button type="button" variant="secondary" onClick={() => router.back()} disabled={isPending}>
