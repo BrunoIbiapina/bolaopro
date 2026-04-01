@@ -20,7 +20,24 @@ export class PaymentsService {
     const member = await this.prisma.poolMember.findUnique({
       where: { poolId_userId: { poolId, userId } },
     });
-    if (!member) throw new NotFoundException('User is not a member of this pool');
+
+    // Admin ou não-membro: retorna status padrão sem erro
+    if (!member) {
+      return {
+        poolId,
+        userId,
+        entryFee: pool.entryFee,
+        numCotas: 0,
+        totalAmount: 0,
+        paymentStatus: 'NOT_MEMBER',
+        paymentId: null,
+        paidAt: null,
+        pixPayload: null,
+        qrCodeBase64: null,
+        paymentProofUrl: null,
+        hasPixKey: !!(pool.pixKey || process.env.PIX_KEY),
+      };
+    }
 
     const payment = await this.prisma.payment.findFirst({ where: { poolId, userId } });
 
