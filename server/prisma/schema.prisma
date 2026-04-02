@@ -49,6 +49,8 @@ model User {
   fullName                     String
   phone                        String?
   pixKey                       String?
+  whatsappOptIn                Boolean   @default(false)
+  whatsappVerifiedAt           DateTime?
   avatar                       String?
   bio                          String?
   role                         UserRole @default(USER)
