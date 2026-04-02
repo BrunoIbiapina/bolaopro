@@ -1,0 +1,326 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Plus, Search, TrendingUp, Clock, Users, Trophy, Lock, Globe } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  useCausasFeed,
+  type CausaCategory,
+  type CausasFilters,
+  CAUSA_CATEGORY_LABELS,
+  CAUSA_STATUS_LABELS,
+  formatDeadline,
+  type Causa,
+} from '@/hooks/use-causas';
+
+// ─── Filtros ─────────────────────────────────────────────────
+
+const STATUS_TABS = [
+  { value: 'OPEN', label: 'Abertas' },
+  { value: 'RESOLVED', label: 'Resolvidas' },
+  { value: 'ALL', label: 'Todas' },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mais recentes' },
+  { value: 'deadline', label: 'Encerrando logo' },
+  { value: 'popular', label: 'Mais votadas' },
+] as const;
+
+// ─── CausaCard ────────────────────────────────────────────────
+
+function CausaCard({ causa }: { causa: Causa }) {
+  const router = useRouter();
+  const cat = CAUSA_CATEGORY_LABELS[causa.category];
+  const status = CAUSA_STATUS_LABELS[causa.status];
+  const totalVotes = causa._count.votes;
+  const deadline = formatDeadline(causa.deadlineAt);
+  const isPaid = causa.entryFee > 0;
+
+  // Calcular barras de progresso com os dados das opções (se disponíveis)
+  const topOptions = causa.options.slice(0, 3);
+
+  return (
+    <div
+      onClick={() => router.push(`/causas/${causa.id}`)}
+      className="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200"
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cat.color}`}>
+            {cat.emoji} {cat.label}
+          </span>
+          <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>
+            {status.label}
+          </span>
+          {isPaid && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              💰 R$ {causa.entryFee.toFixed(0)}/cota
+            </span>
+          )}
+        </div>
+        {causa.visibility === 'PRIVATE' ? (
+          <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        ) : (
+          <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        )}
+      </div>
+
+      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        {causa.title}
+      </h3>
+
+      {/* Barras de opções (apenas para BINARY e CHOICE com dados) */}
+      {(causa.type === 'BINARY' || causa.type === 'CHOICE') && topOptions.length > 0 && (
+        <div className="space-y-1.5 mb-3">
+          {topOptions.map((opt) => (
+            <div key={opt.id} className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 w-5">{opt.emoji}</span>
+              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${opt.percentage ?? 0}%` }}
+                />
+              </div>
+              <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-right">
+                {opt.percentage != null ? `${opt.percentage}%` : '—'}
+              </span>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[80px]">
+                {opt.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {causa.type === 'NUMERIC' && (
+        <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500 dark:text-gray-400">
+          <span>🔢</span>
+          <span>Previsão numérica · {causa.numericUnit ?? 'valor'}</span>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            {totalVotes} voto{totalVotes !== 1 ? 's' : ''}
+          </span>
+          {isPaid && causa.prizePool > 0 && (
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+              <Trophy className="w-3 h-3" />
+              R$ {causa.prizePool.toFixed(2)}
+            </span>
+          )}
+        </div>
+        {causa.status === 'OPEN' && (
+          <span className="flex items-center gap-1 text-orange-500">
+            <Clock className="w-3 h-3" />
+            {deadline}
+          </span>
+        )}
+        {causa.status === 'RESOLVED' && (
+          <span className="flex items-center gap-1 text-blue-500">
+            <Trophy className="w-3 h-3" />
+            Resolvida
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────
+
+export default function CausasPage() {
+  const [filters, setFilters] = useState<CausasFilters>({
+    status: 'OPEN',
+    sortBy: 'newest',
+    page: 1,
+    limit: 20,
+  });
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<CausaCategory | undefined>();
+
+  const { data, isLoading, isError } = useCausasFeed({
+    ...filters,
+    category: selectedCategory,
+    search: search.trim() || undefined,
+  });
+
+  const setStatus = (s: typeof filters.status) =>
+    setFilters((f) => ({ ...f, status: s, page: 1 }));
+  const setSortBy = (s: typeof filters.sortBy) =>
+    setFilters((f) => ({ ...f, sortBy: s, page: 1 }));
+  const setPage = (p: number) => setFilters((f) => ({ ...f, page: p }));
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">🗳️ Causas</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            Faça suas previsões sobre qualquer assunto
+          </p>
+        </div>
+        <Link href="/causas/new">
+          <Button size="sm" className="gap-1.5">
+            <Plus className="w-4 h-4" />
+            Criar
+          </Button>
+        </Link>
+      </div>
+
+      {/* Busca */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Input
+          placeholder="Buscar causas..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Abas de status */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setStatus(tab.value as any)}
+            className={`flex-1 text-sm py-1.5 px-3 rounded-md font-medium transition-all ${
+              filters.status === tab.value
+                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtros de categoria */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setSelectedCategory(undefined)}
+          className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+            !selectedCategory
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400'
+          }`}
+        >
+          Todas
+        </button>
+        {(Object.keys(CAUSA_CATEGORY_LABELS) as CausaCategory[]).map((cat) => {
+          const meta = CAUSA_CATEGORY_LABELS[cat];
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat === selectedCategory ? undefined : cat)}
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                selectedCategory === cat
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400'
+              }`}
+            >
+              {meta.emoji} {meta.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Ordenação */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Ordenar:</span>
+        <div className="flex gap-1">
+          {SORT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setSortBy(opt.value as any)}
+              className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                filters.sortBy === opt.value
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Lista */}
+      {isLoading && (
+        <div className="grid gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <p>Erro ao carregar causas.</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && data && (
+        <>
+          {data.items.length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-4xl mb-3">🗳️</p>
+              <p className="text-gray-500 dark:text-gray-400 font-medium">Nenhuma causa encontrada</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                Que tal criar a primeira?
+              </p>
+              <Link href="/causas/new">
+                <Button size="sm" className="mt-4">
+                  <Plus className="w-4 h-4 mr-1.5" /> Criar causa
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {data.items.map((causa) => (
+                <CausaCard key={causa.id} causa={causa} />
+              ))}
+            </div>
+          )}
+
+          {/* Paginação */}
+          {data.pages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={filters.page === 1}
+                onClick={() => setPage((filters.page ?? 1) - 1)}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {filters.page} / {data.pages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={filters.page === data.pages}
+                onClick={() => setPage((filters.page ?? 1) + 1)}
+              >
+                Próxima
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}

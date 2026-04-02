@@ -13,6 +13,7 @@ import {
   TrendingUp,
   BookOpen,
   Download,
+  Vote,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRole } from '@/types';
@@ -22,6 +23,7 @@ const MAIN_ROUTES = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/pools', label: 'Meus Bolões', icon: Trophy },
   { href: '/futebol', label: 'Futebol', icon: TrendingUp },
+  { href: '/causas', label: 'Causas', icon: Vote },
   { href: '/notifications', label: 'Notificações', icon: Bell },
   { href: '/profile', label: 'Perfil', icon: Settings },
 ];

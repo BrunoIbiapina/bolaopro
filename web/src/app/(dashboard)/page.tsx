@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PoolCard } from '@/components/shared/pool-card';
 import { FullPageSkeleton } from '@/components/shared/loading-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
-import { Trophy, Plus, TrendingUp } from 'lucide-react';
+import { Trophy, Plus, TrendingUp, Vote } from 'lucide-react';
 import { NewFeatureBanner } from '@/components/shared/new-feature-banner';
 
 export default function DashboardPage() {
@@ -41,6 +41,15 @@ export default function DashboardPage() {
         ctaLabel="Conferir agora"
         ctaHref="/futebol"
         icon={<TrendingUp className="w-5 h-5 text-brand-400" />}
+      />
+
+      <NewFeatureBanner
+        storageKey="feat_causas_v1"
+        title="🗳️ Causas — previsões sobre qualquer assunto!"
+        description="Crie apostas sobre eleições, clima, esporte ou qualquer evento. Vote com amigos e veja quem acerta mais. Gratuito ou com prêmio em dinheiro."
+        ctaLabel="Explorar causas"
+        ctaHref="/causas"
+        icon={<Vote className="w-5 h-5 text-brand-400" />}
       />
 
       {/* Quick Actions */}
