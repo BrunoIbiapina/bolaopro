@@ -11,7 +11,7 @@ export type CausaCategory =
   | 'ENTRETENIMENTO' | 'NEGOCIOS' | 'CULTURA' | 'OUTROS';
 
 export type CausaType = 'BINARY' | 'CHOICE' | 'NUMERIC';
-export type CausaStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'RESOLVED' | 'CANCELLED';
+export type CausaStatus = 'DRAFT' | 'SCHEDULED' | 'OPEN' | 'CLOSED' | 'RESOLVED' | 'CANCELLED';
 export type CausaVisibility = 'PUBLIC' | 'PRIVATE';
 export type NumericMatchMode = 'EXACT' | 'CLOSEST';
 
@@ -55,11 +55,15 @@ export interface Causa {
   allowComments: boolean;
   numericUnit?: string;
   numericMatchMode: NumericMatchMode;
+  isFeatured: boolean;
+  scheduledOpenAt?: string;
   options: CausaOption[];
   _count: { votes: number };
   createdAt: string;
   updatedAt: string;
 }
+
+export type CausaPaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
 
 export interface CausaVote {
   id: string;
@@ -70,6 +74,11 @@ export interface CausaVote {
   numericValue?: number;
   numCotas: number;
   amount: number;
+  paymentStatus: CausaPaymentStatus;
+  pixPayload?: string | null;
+  qrCodeBase64?: string | null;
+  notifiedAt?: string | null;
+  paidAt?: string | null;
   isCorrect?: boolean | null;
   prizeAmount?: number;
   createdAt: string;
@@ -134,6 +143,7 @@ export const causaKeys = {
   leaderboard: (id: string) => ['causas', id, 'leaderboard'] as const,
   my: ['causas', 'my'] as const,
   invite: (code: string) => ['causas', 'invite', code] as const,
+  pendingPayments: (id: string) => ['causas', id, 'pending-payments'] as const,
 };
 
 // ─── Hooks de leitura ─────────────────────────────────────────
@@ -251,17 +261,50 @@ export function useCreateCausa() {
 export function usePublishCausa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (causaId: string) => {
-      const { data } = await api.post(`/causas/${causaId}/publish`);
+    mutationFn: async ({
+      causaId,
+      asScheduled = false,
+      isFeatured = false,
+      scheduledOpenAt,
+    }: {
+      causaId: string;
+      asScheduled?: boolean;
+      isFeatured?: boolean;
+      scheduledOpenAt?: string;
+    }) => {
+      const { data } = await api.post(`/causas/${causaId}/publish`, {
+        asScheduled,
+        isFeatured,
+        scheduledOpenAt,
+      });
       return data as Causa;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: causaKeys.detail(data.id) });
       qc.invalidateQueries({ queryKey: causaKeys.my });
-      toast.success('Causa publicada!');
+      qc.invalidateQueries({ queryKey: causaKeys.all });
+      toast.success(data.status === 'SCHEDULED' ? 'Causa agendada! Aparecerá como "Em Breve".' : 'Causa publicada!');
     },
     onError: (e: any) => {
       toast.error(e?.response?.data?.message ?? 'Erro ao publicar');
+    },
+  });
+}
+
+export function useOpenScheduledCausa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (causaId: string) => {
+      const { data } = await api.post(`/causas/${causaId}/open`);
+      return data as Causa;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: causaKeys.detail(data.id) });
+      qc.invalidateQueries({ queryKey: causaKeys.all });
+      toast.success('Causa aberta para votação!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao abrir causa');
     },
   });
 }
@@ -271,13 +314,17 @@ export function useVoteCausa() {
   return useMutation({
     mutationFn: async ({ causaId, payload }: { causaId: string; payload: VotePayload }) => {
       const { data } = await api.post(`/causas/${causaId}/vote`, payload);
-      return data as CausaVote;
+      return data as CausaVote & { qrCodeBase64?: string | null };
     },
-    onSuccess: (_, vars) => {
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: causaKeys.votes(vars.causaId) });
       qc.invalidateQueries({ queryKey: causaKeys.myVote(vars.causaId) });
       qc.invalidateQueries({ queryKey: causaKeys.detail(vars.causaId) });
-      toast.success('Voto registrado!');
+      if (data.paymentStatus === 'PAID') {
+        toast.success('Voto registrado!');
+      } else {
+        toast.info('Voto registrado! Realize o pagamento para confirmar.');
+      }
     },
     onError: (e: any) => {
       toast.error(e?.response?.data?.message ?? 'Erro ao votar');
@@ -337,6 +384,160 @@ export function useResolveCausa() {
   });
 }
 
+export function useNotifyPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (causaId: string) => {
+      const { data } = await api.post(`/causas/${causaId}/vote/notify-paid`);
+      return data;
+    },
+    onSuccess: (_, causaId) => {
+      qc.invalidateQueries({ queryKey: causaKeys.myVote(causaId) });
+      toast.success('Admin notificado! Aguarde a confirmação.');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao notificar');
+    },
+  });
+}
+
+export function useRejectCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, userId }: { causaId: string; userId: string }) => {
+      const { data } = await api.post(`/causas/${causaId}/vote/${userId}/reject-payment`);
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: causaKeys.pendingPayments(vars.causaId) });
+      toast.success('Pagamento marcado como não confirmado');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao rejeitar pagamento');
+    },
+  });
+}
+
+export function useUploadCausaProof() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, file }: { causaId: string; file: File }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await api.post(`/causas/${causaId}/vote/proof`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: causaKeys.myVote(vars.causaId) });
+      toast.success('Comprovante enviado!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao enviar comprovante');
+    },
+  });
+}
+
+export function useConfirmCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, userId }: { causaId: string; userId: string }) => {
+      const { data } = await api.post(`/causas/${causaId}/vote/${userId}/confirm-payment`);
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: causaKeys.pendingPayments(vars.causaId) });
+      qc.invalidateQueries({ queryKey: causaKeys.votes(vars.causaId) });
+      qc.invalidateQueries({ queryKey: causaKeys.detail(vars.causaId) });
+      toast.success('Pagamento confirmado!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao confirmar pagamento');
+    },
+  });
+}
+
+export function useAdminCausasKpis() {
+  return useQuery({
+    queryKey: ['admin', 'causas', 'kpis'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/causas-payments/kpis');
+      return data as {
+        totalReceived: number;
+        platformRevenue: number;
+        totalPending: number;
+        pendingCount: number;
+        paidCount: number;
+        activeCausas: number;
+      };
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAdminAllCausasPendingPayments() {
+  return useQuery({
+    queryKey: ['admin', 'causas', 'pending-payments'],
+    queryFn: async () => {
+      const { data } = await api.get('/admin/causas-payments/pending');
+      return data as Array<{
+        id: string;
+        userId: string;
+        causaId: string;
+        user: { id: string; fullName: string; email: string; avatar?: string };
+        option?: { id: string; label: string };
+        numericValue?: number;
+        numCotas: number;
+        amount: number;
+        notifiedAt?: string | null;
+        createdAt: string;
+        causa: { id: string; title: string; entryFee: number; creator: { id: string; fullName: string } };
+      }>;
+    },
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAdminConfirmCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, userId }: { causaId: string; userId: string }) => {
+      const { data } = await api.post(`/admin/causas-payments/${causaId}/confirm/${userId}`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'causas'] });
+      toast.success('Pagamento confirmado!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao confirmar pagamento');
+    },
+  });
+}
+
+export function usePendingCausaPayments(causaId: string | null) {
+  return useQuery({
+    queryKey: causaKeys.pendingPayments(causaId ?? ''),
+    queryFn: async () => {
+      const { data } = await api.get(`/causas/${causaId}/pending-payments`);
+      return data as Array<{
+        id: string;
+        userId: string;
+        user: { id: string; fullName: string; email: string; avatar?: string };
+        option?: { id: string; label: string };
+        numericValue?: number;
+        numCotas: number;
+        amount: number;
+        notifiedAt?: string | null;
+        createdAt: string;
+      }>;
+    },
+    enabled: !!causaId,
+    refetchInterval: 15_000,
+  });
+}
+
 export function useCancelCausa() {
   const qc = useQueryClient();
   return useMutation({
@@ -367,11 +568,12 @@ export const CAUSA_CATEGORY_LABELS: Record<CausaCategory, { label: string; color
 };
 
 export const CAUSA_STATUS_LABELS: Record<CausaStatus, { label: string; color: string }> = {
-  DRAFT:     { label: 'Rascunho',  color: 'bg-gray-100 text-gray-600' },
-  OPEN:      { label: 'Aberta',    color: 'bg-green-100 text-green-700' },
-  CLOSED:    { label: 'Encerrada', color: 'bg-orange-100 text-orange-700' },
-  RESOLVED:  { label: 'Resolvida', color: 'bg-blue-100 text-blue-700' },
-  CANCELLED: { label: 'Cancelada', color: 'bg-red-100 text-red-700' },
+  DRAFT:     { label: 'Rascunho',  color: 'bg-gray-800 text-gray-400' },
+  SCHEDULED: { label: 'Em Breve',  color: 'bg-violet-500/20 text-violet-300' },
+  OPEN:      { label: 'Aberta',    color: 'bg-emerald-500/20 text-emerald-300' },
+  CLOSED:    { label: 'Encerrada', color: 'bg-orange-500/20 text-orange-300' },
+  RESOLVED:  { label: 'Resolvida', color: 'bg-blue-500/20 text-blue-300' },
+  CANCELLED: { label: 'Cancelada', color: 'bg-red-500/20 text-red-400' },
 };
 
 export function formatDeadline(dateStr: string): string {

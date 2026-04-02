@@ -58,10 +58,15 @@ export class CausasService {
         numericMatchMode: dto.numericMatchMode ?? 'CLOSEST',
         options: dto.type === CausaType.BINARY
           ? {
-              create: [
-                { label: 'Sim', emoji: '✅', order: 0 },
-                { label: 'Não', emoji: '❌', order: 1 },
-              ],
+              create: dto.options && dto.options.length === 2
+                ? [
+                    { label: dto.options[0].label?.trim() || 'Sim', order: 0 },
+                    { label: dto.options[1].label?.trim() || 'Não', order: 1 },
+                  ]
+                : [
+                    { label: 'Sim', order: 0 },
+                    { label: 'Não', order: 1 },
+                  ],
             }
           : dto.type === CausaType.CHOICE && dto.options
           ? { create: dto.options.map((o, i) => ({ label: o.label, emoji: o.emoji, order: o.order ?? i })) }
@@ -73,14 +78,44 @@ export class CausasService {
     return causa;
   }
 
-  // ── Publicar (DRAFT → OPEN) ───────────────────────────────────
+  // ── Publicar (DRAFT → OPEN | SCHEDULED) ─────────────────────────
 
-  async publish(causaId: string, userId: string, userRole: string) {
+  async publish(
+    causaId: string,
+    userId: string,
+    userRole: string,
+    options?: { asScheduled?: boolean; isFeatured?: boolean; scheduledOpenAt?: string },
+  ) {
     const causa = await this.findOneOrFail(causaId);
     this.assertOwnerOrAdmin(causa, userId, userRole);
 
     if (causa.status !== 'DRAFT') {
       throw new BadRequestException('Somente causas em DRAFT podem ser publicadas');
+    }
+
+    const newStatus = (options?.asScheduled ? 'SCHEDULED' : 'OPEN') as any;
+
+    return this.prisma.causa.update({
+      where: { id: causaId },
+      data: {
+        status: newStatus,
+        isFeatured: options?.isFeatured ?? false,
+        scheduledOpenAt: options?.scheduledOpenAt
+          ? new Date(options.scheduledOpenAt)
+          : null,
+      },
+      include: CAUSA_INCLUDE,
+    });
+  }
+
+  // ── Abrir causa agendada (SCHEDULED → OPEN) ───────────────────
+
+  async openScheduled(causaId: string, userId: string, userRole: string) {
+    const causa = await this.findOneOrFail(causaId);
+    this.assertOwnerOrAdmin(causa, userId, userRole);
+
+    if ((causa.status as string) !== 'SCHEDULED') {
+      throw new BadRequestException('Apenas causas SCHEDULED podem ser abertas desta forma');
     }
 
     return this.prisma.causa.update({
@@ -155,6 +190,13 @@ export class CausasService {
     if (dto.sortBy === CausaSortBy.DEADLINE) orderBy = { deadlineAt: 'asc' };
     if (dto.sortBy === CausaSortBy.POPULAR) orderBy = { votes: { _count: 'desc' } };
 
+    // Buscar causas SCHEDULED em destaque para fixar no topo
+    const featuredScheduled = await this.prisma.causa.findMany({
+      where: { status: 'SCHEDULED' as any, visibility: 'PUBLIC', isFeatured: true },
+      include: CAUSA_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+
     const [items, total] = await Promise.all([
       this.prisma.causa.findMany({
         where,
@@ -166,12 +208,16 @@ export class CausasService {
       this.prisma.causa.count({ where }),
     ]);
 
+    // Remover duplicatas (caso scheduled também apareça no filtro)
+    const featuredIds = new Set(featuredScheduled.map((c) => c.id));
+    const filteredItems = items.filter((i) => !featuredIds.has(i.id));
+
     return {
-      items,
-      total,
+      items: [...featuredScheduled, ...filteredItems],
+      total: total + featuredScheduled.length,
       page,
       limit,
-      pages: Math.ceil(total / limit),
+      pages: Math.ceil((total + featuredScheduled.length) / limit),
     };
   }
 

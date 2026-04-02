@@ -279,6 +279,7 @@ enum CausaType {
 
 enum CausaStatus {
   DRAFT
+  SCHEDULED
   OPEN
   CLOSED
   RESOLVED
@@ -324,6 +325,8 @@ model Causa {
   allowComments        Boolean         @default(true)
   numericUnit          String?
   numericMatchMode     NumericMatchMode @default(CLOSEST)
+  isFeatured           Boolean         @default(false)
+  scheduledOpenAt      DateTime?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
@@ -354,26 +357,31 @@ model CausaOption {
 }
 
 model CausaVote {
-  id           String       @id @default(cuid())
-  causaId      String
-  causa        Causa        @relation(fields: [causaId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  optionId     String?
-  option       CausaOption? @relation(fields: [optionId], references: [id])
-  numericValue Float?
-  numCotas     Int          @default(1)
-  amount       Float        @default(0)
-  isCorrect    Boolean?
-  prizeAmount  Float?
-  paidAt       DateTime?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id              String        @id @default(cuid())
+  causaId         String
+  causa           Causa         @relation(fields: [causaId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  optionId        String?
+  option          CausaOption?  @relation(fields: [optionId], references: [id])
+  numericValue    Float?
+  numCotas        Int           @default(1)
+  amount          Float         @default(0)
+  paymentStatus   PaymentStatus @default(PENDING)
+  pixPayload      String?
+  paymentProofUrl String?
+  notifiedAt      DateTime?
+  isCorrect       Boolean?
+  prizeAmount     Float?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@unique([causaId, userId])
   @@index([causaId])
   @@index([userId])
   @@index([isCorrect])
+  @@index([paymentStatus])
 }
 
 model AuditLog {

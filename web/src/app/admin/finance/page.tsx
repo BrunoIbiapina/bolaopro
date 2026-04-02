@@ -26,6 +26,7 @@ import {
   Check,
   Wallet,
   AlertTriangle,
+  Vote,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import {
@@ -36,6 +37,11 @@ import {
   useAdminConfirmPayment,
   useAdminRejectPayment,
 } from '@/hooks/use-payments';
+import {
+  useAdminCausasKpis,
+  useAdminAllCausasPendingPayments,
+  useAdminConfirmCausaPayment,
+} from '@/hooks/use-causas';
 import { useMyPools } from '@/hooks/use-pools';
 import { useRanking, useMarkPrizePaid, useUnmarkPrizePaid } from '@/hooks/use-ranking';
 import { AvatarWithInitials } from '@/components/ui/avatar';
@@ -548,9 +554,147 @@ function MembersTab({ searchQuery }: { searchQuery: string }) {
   );
 }
 
+// ─── Causas tab ───────────────────────────────────────────────────────────────
+function CausasTab() {
+  const { data: kpis, isLoading: loadingKpis } = useAdminCausasKpis();
+  const { data: pending, isLoading: loadingPending } = useAdminAllCausasPendingPayments();
+  const { mutate: confirmPayment, isPending: confirming } = useAdminConfirmCausaPayment();
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  const handleConfirm = (causaId: string, userId: string, voteId: string) => {
+    setConfirmingId(voteId);
+    confirmPayment({ causaId, userId }, { onSettled: () => setConfirmingId(null) });
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* KPIs de causas */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <KpiCard
+          label="Arrecadado (causas)"
+          value={loadingKpis ? '—' : formatCurrency(kpis?.totalReceived ?? 0)}
+          sub={`${kpis?.paidCount ?? 0} pagamentos confirmados`}
+          icon={<Vote className="size-5 text-purple-400" />}
+          iconClass="bg-purple-500/10"
+        />
+        <KpiCard
+          label="Receita da plataforma"
+          value={loadingKpis ? '—' : formatCurrency(kpis?.platformRevenue ?? 0)}
+          sub="10% do arrecadado"
+          icon={<TrendingUp className="size-5 text-green-400" />}
+          iconClass="bg-green-500/10"
+        />
+        <KpiCard
+          label="Pendentes"
+          value={loadingKpis ? '—' : formatCurrency(kpis?.totalPending ?? 0)}
+          sub={`${kpis?.pendingCount ?? 0} aguardando confirmação`}
+          icon={<Clock className="size-5 text-yellow-400" />}
+          iconClass="bg-yellow-500/10"
+        />
+      </div>
+
+      {/* Regras financeiras */}
+      <Card>
+        <CardContent className="p-5 space-y-3">
+          <p className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+            <Layers className="size-4 text-brand-400" /> Regras financeiras das Causas
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div className="bg-surface/60 rounded-lg p-3 border border-surface-lighter/60">
+              <p className="text-xs text-gray-400 mb-1">Taxa da plataforma</p>
+              <p className="font-semibold text-gray-100">10% do prize pool</p>
+              <p className="text-xs text-gray-500 mt-0.5">Configurado em cada causa (campo <code className="text-brand-400">platformFeePercent</code>)</p>
+            </div>
+            <div className="bg-surface/60 rounded-lg p-3 border border-surface-lighter/60">
+              <p className="text-xs text-gray-400 mb-1">Sem vencedor (NUMERIC exato)</p>
+              <p className="font-semibold text-gray-100">100% vai para a plataforma</p>
+              <p className="text-xs text-gray-500 mt-0.5">Quando ninguém acerta o valor exato</p>
+            </div>
+            <div className="bg-surface/60 rounded-lg p-3 border border-surface-lighter/60">
+              <p className="text-xs text-gray-400 mb-1">Chave Pix para recebimento</p>
+              <p className="font-semibold text-gray-100 font-mono text-xs break-all">
+                Variável <code className="text-brand-400">PIX_KEY</code> no Railway
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Mesma chave dos bolões</p>
+            </div>
+            <div className="bg-surface/60 rounded-lg p-3 border border-surface-lighter/60">
+              <p className="text-xs text-gray-400 mb-1">Confirmação de pagamento</p>
+              <p className="font-semibold text-gray-100">Criador da causa ou Admin</p>
+              <p className="text-xs text-gray-500 mt-0.5">Pelo painel da causa ou por aqui</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de pendentes */}
+      <div>
+        <p className="text-sm font-semibold text-gray-300 mb-3">
+          Pagamentos pendentes — todas as causas
+        </p>
+        {loadingPending ? (
+          <div className="flex justify-center py-10"><Loader2 className="size-6 animate-spin text-brand-400" /></div>
+        ) : !pending?.length ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+              <div className="size-12 bg-green-500/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="size-6 text-green-400" />
+              </div>
+              <p className="font-semibold text-gray-200">Tudo confirmado!</p>
+              <p className="text-sm text-gray-500">Não há pagamentos pendentes em nenhuma causa.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {pending.map((pmt) => {
+              const isProcessing = confirmingId === pmt.id && confirming;
+              return (
+                <Card key={pmt.id}>
+                  <CardContent className="p-4 flex items-center gap-3">
+                    {pmt.user.avatar
+                      ? <img src={pmt.user.avatar} className="size-9 rounded-full object-cover flex-shrink-0" />
+                      : <div className="size-9 rounded-full bg-brand-600/20 flex items-center justify-center text-sm font-bold text-brand-400 flex-shrink-0">{pmt.user.fullName[0]}</div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-100 truncate">{pmt.user.fullName}</p>
+                      <p className="text-xs text-gray-500 truncate">{pmt.causa.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {pmt.option ? pmt.option.label : pmt.numericValue != null ? `Palpite: ${pmt.numericValue}` : '—'}
+                        {' · '}{pmt.numCotas} cota{pmt.numCotas !== 1 ? 's' : ''}
+                        {pmt.notifiedAt && (
+                          <span className="ml-1.5 text-amber-400">· notificou que pagou</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0 mr-2">
+                      <p className="text-sm font-bold text-gray-100">{formatCurrency(pmt.amount)}</p>
+                      <p className="text-xs text-gray-500">por {pmt.causa.creator.fullName}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={isProcessing}
+                      onClick={() => handleConfirm(pmt.causaId, pmt.userId, pmt.id)}
+                      className="gap-1.5 shrink-0"
+                    >
+                      {isProcessing
+                        ? <Loader2 className="size-3.5 animate-spin" />
+                        : <CheckCircle2 className="size-3.5" />
+                      }
+                      Confirmar
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────────────────
 export default function FinancePage() {
-  const [mainView, setMainView] = useState<'payments' | 'members' | 'winners'>('members');
+  const [mainView, setMainView] = useState<'payments' | 'members' | 'winners' | 'causas'>('members');
   const [activeTab, setActiveTab] = useState('ALL');
   const [search, setSearch] = useState('');
   const [selectedPool, setSelectedPool] = useState('');
@@ -642,6 +786,18 @@ export default function FinancePage() {
           <Trophy className="size-4" />
           Apuração & Prêmios
         </button>
+        <button
+          onClick={() => setMainView('causas')}
+          className={cn(
+            'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+            mainView === 'causas'
+              ? 'bg-purple-500/20 border-purple-500/50 text-purple-400'
+              : 'border-surface-lighter text-gray-400 hover:text-gray-200 hover:border-gray-600',
+          )}
+        >
+          <Vote className="size-4" />
+          Causas
+        </button>
       </div>
 
       {/* KPIs */}
@@ -674,6 +830,9 @@ export default function FinancePage() {
           iconClass="bg-red-500/10"
         />
       </div>
+
+      {/* Causas */}
+      {mainView === 'causas' && <CausasTab />}
 
       {/* Apuração & Prêmios */}
       {mainView === 'winners' && <WinnersTab />}
