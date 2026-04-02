@@ -3,13 +3,20 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { ResolveCausaDto } from './dto/resolve-causa.dto';
 
 @Injectable()
 export class CausasResolutionService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(CausasResolutionService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private whatsapp: WhatsAppService,
+  ) {}
 
   async resolve(causaId: string, userId: string, userRole: string, dto: ResolveCausaDto) {
     const causa = await this.prisma.causa.findUnique({
@@ -124,14 +131,53 @@ export class CausasResolutionService {
       }
     });
 
-    return this.prisma.causa.findUnique({
+    const resolved = await this.prisma.causa.findUnique({
       where: { id: causaId },
       include: {
         creator: { select: { id: true, fullName: true, avatar: true } },
         options: { orderBy: { order: 'asc' } },
         resolvedOption: true,
         _count: { select: { votes: true } },
+        votes: {
+          include: {
+            user: { select: { phone: true, whatsappOptIn: true } },
+          },
+        },
       },
     });
+
+    // Disparar notificações WhatsApp em background (não bloqueia a resposta)
+    if (resolved) {
+      this.notifyVoters(resolved).catch((err) =>
+        this.logger.error('Erro ao notificar via WhatsApp:', err),
+      );
+    }
+
+    // Retornar sem os votes populados (manter contrato original)
+    const { votes: _votes, ...rest } = resolved as any;
+    return rest;
+  }
+
+  private async notifyVoters(causa: any): Promise<void> {
+    for (const vote of causa.votes ?? []) {
+      const { phone, whatsappOptIn } = vote.user ?? {};
+      if (!whatsappOptIn || !phone) continue;
+
+      try {
+        await this.whatsapp.notifyCausaResolved({
+          phone,
+          causaTitle: causa.title,
+          isWinner: vote.isCorrect === true,
+          prize: vote.prizeAmount ?? 0,
+        });
+        // Marcar notifiedAt
+        await this.prisma.causaVote.update({
+          where: { id: vote.id },
+          data: { notifiedAt: new Date() },
+        });
+      } catch (err) {
+        this.logger.warn(`Falha ao notificar voto ${vote.id}: ${err}`);
+      }
+    }
   }
 }

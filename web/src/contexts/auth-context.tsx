@@ -10,7 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (fullName: string, email: string, password: string, pixKey?: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string, phone: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
@@ -57,13 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (fullName: string, email: string, password: string, pixKey?: string) => {
+    async (fullName: string, email: string, password: string, phone: string) => {
       try {
         const response = await api.post<AuthResponse>('/auth/register', {
           fullName,
           email,
           password,
-          ...(pixKey ? { pixKey } : {}),
+          phone,
         });
 
         const { accessToken, refreshToken, user } = response.data;

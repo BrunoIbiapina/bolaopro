@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { RegisterMatchResultDto } from './dto/register-match-result.dto';
 import { RankingsService } from '../rankings/rankings.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class MatchesService {
+  private readonly logger = new Logger(MatchesService.name);
+
   constructor(
     private prisma: PrismaService,
     private rankingsService: RankingsService,
+    private whatsapp: WhatsAppService,
   ) {}
 
   async createMatch(createMatchDto: CreateMatchDto) {
@@ -130,7 +134,56 @@ export class MatchesService {
       }
     }
 
+    // Notificar participantes com palpite nesta partida via WhatsApp
+    this.notifyMatchResultToParticipants(id, updated).catch((err) =>
+      this.logger.error(`Falha ao enviar notificações de resultado: ${err.message}`),
+    );
+
     return updated;
+  }
+
+  /**
+   * Envia WhatsApp para cada participante que fez palpite nessa partida,
+   * informando se acertou ou errou o placar.
+   */
+  private async notifyMatchResultToParticipants(
+    matchId: string,
+    match: { homeScoreResult: number | null; awayScoreResult: number | null; homeTeam: { name: string }; awayTeam: { name: string } },
+  ): Promise<void> {
+    if (match.homeScoreResult === null || match.awayScoreResult === null) return;
+
+    const predictions = await this.prisma.prediction.findMany({
+      where: { matchId },
+      include: {
+        user: { select: { phone: true, whatsappOptIn: true } },
+        pool: { select: { name: true } },
+      },
+    });
+
+    for (const pred of predictions) {
+      if (!pred.user.whatsappOptIn || !pred.user.phone) continue;
+
+      const isCorrect =
+        pred.homeScore === match.homeScoreResult &&
+        pred.awayScore === match.awayScoreResult;
+
+      this.whatsapp
+        .notifyMatchResult({
+          phone: pred.user.phone,
+          poolName: pred.pool.name,
+          homeTeam: match.homeTeam.name,
+          awayTeam: match.awayTeam.name,
+          homeScore: match.homeScoreResult,
+          awayScore: match.awayScoreResult,
+          predictedHome: pred.homeScore,
+          predictedAway: pred.awayScore,
+          isCorrect,
+          pointsEarned: isCorrect ? 10 : 0,
+        })
+        .catch((err) =>
+          this.logger.error(`Falha ao notificar usuário ${pred.userId}: ${err.message}`),
+        );
+    }
   }
 
   /**

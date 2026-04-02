@@ -24,6 +24,9 @@ import {
   Check,
   X,
   Banknote,
+  MessageCircle,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -87,6 +90,170 @@ function InfoRow({ label, value, icon: Icon }: { label: string; value?: string; 
     </div>
   );
 }
+
+// ─── WhatsApp Section ──────────────────────────────────────────
+
+type WaStep = 'idle' | 'awaiting_code' | 'sending';
+
+function WhatsAppSection({ user, onUpdate }: { user: any; onUpdate: (u: any) => void }) {
+  const [step, setStep] = useState<WaStep>('idle');
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const isVerified = !!user?.whatsappOptIn && !!user?.whatsappVerifiedAt;
+  const hasPhone = !!user?.phone;
+
+  const sendOtp = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post('/users/me/whatsapp/send-otp');
+      toast.success(res.data?.message ?? 'Código enviado!');
+      setStep('awaiting_code');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Erro ao enviar código');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (code.length !== 6) { toast.error('O código tem 6 dígitos'); return; }
+    setLoading(true);
+    try {
+      const res = await api.post('/users/me/whatsapp/verify-otp', { code });
+      toast.success(res.data?.message ?? 'WhatsApp verificado!');
+      onUpdate({ ...user, whatsappOptIn: true, whatsappVerifiedAt: new Date().toISOString() });
+      setStep('idle');
+      setCode('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Código incorreto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disable = async () => {
+    setLoading(true);
+    try {
+      await api.delete('/users/me/whatsapp');
+      toast.success('Notificações por WhatsApp desativadas.');
+      onUpdate({ ...user, whatsappOptIn: false, whatsappVerifiedAt: null });
+    } catch {
+      toast.error('Erro ao desativar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-surface border border-surface-light overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-surface-light">
+        <div className="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center">
+          <MessageCircle className="w-4 h-4 text-green-400" />
+        </div>
+        <div className="flex-1">
+          <span className="font-semibold text-gray-100">Notificações por WhatsApp</span>
+        </div>
+        {isVerified && (
+          <span className="flex items-center gap-1 text-xs font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full">
+            <CheckCircle className="w-3 h-3" />
+            Ativo
+          </span>
+        )}
+      </div>
+
+      <div className="px-5 py-4 space-y-4">
+        {/* Sem telefone */}
+        {!hasPhone && (
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-300">
+              Cadastre um número de telefone nas informações pessoais para ativar notificações por WhatsApp.
+            </p>
+          </div>
+        )}
+
+        {/* Ativo */}
+        {hasPhone && isVerified && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-300">
+              Você vai receber notificações sobre resultados de causas, lembretes de prazo e atualizações do bolão diretamente no WhatsApp.
+            </p>
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+              <p className="text-sm text-green-300 font-medium">
+                Número verificado: {user.phone}
+              </p>
+            </div>
+            <button
+              onClick={disable}
+              disabled={loading}
+              className="text-sm text-red-400 hover:text-red-300 transition-colors font-medium"
+            >
+              Desativar notificações
+            </button>
+          </div>
+        )}
+
+        {/* Inativo, tem telefone */}
+        {hasPhone && !isVerified && step === 'idle' && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-400">
+              Receba resultados, lembretes de prazo e atualizações diretamente no WhatsApp. Vamos enviar um código para confirmar seu número.
+            </p>
+            <Button
+              onClick={sendOtp}
+              disabled={loading}
+              className="gap-2 bg-green-600 hover:bg-green-500 text-white border-0"
+            >
+              <MessageCircle className="w-4 h-4" />
+              {loading ? 'Enviando...' : 'Ativar WhatsApp'}
+            </Button>
+          </div>
+        )}
+
+        {/* Aguardando código */}
+        {hasPhone && !isVerified && step === 'awaiting_code' && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-400">
+              Enviamos um código de 6 dígitos para <span className="text-gray-200 font-medium">{user.phone}</span>. Digite abaixo para confirmar.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                className="text-center text-lg font-mono tracking-widest max-w-[140px]"
+                maxLength={6}
+                disabled={loading}
+              />
+              <Button onClick={verifyOtp} disabled={loading || code.length !== 6} className="gap-1.5">
+                <Check className="w-4 h-4" />
+                {loading ? 'Verificando...' : 'Confirmar'}
+              </Button>
+            </div>
+            <button
+              onClick={() => { setStep('idle'); setCode(''); }}
+              className="text-xs text-gray-500 hover:text-gray-400 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={sendOtp}
+              disabled={loading}
+              className="text-xs text-brand-400 hover:text-brand-300 transition-colors block"
+            >
+              Reenviar código
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const { user, logout, updateUser } = useAuth();
@@ -384,6 +551,9 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* WhatsApp */}
+      <WhatsAppSection user={user as any} onUpdate={updateUser} />
 
       {/* Logout */}
       <button

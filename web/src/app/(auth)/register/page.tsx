@@ -10,13 +10,14 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { User, Mail, Lock, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, Phone, ArrowRight } from 'lucide-react';
 import { PageLoader } from '@/components/shared/page-loader';
 
 const registerSchema = z
   .object({
     fullName: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
     email: z.string().email('Email inválido'),
+    phone: z.string().min(10, 'Informe um número de WhatsApp válido'),
     password: z.string().min(8, 'Senha deve ter pelo menos 8 caracteres'),
     confirmPassword: z.string(),
     acceptTerms: z.boolean().refine((val) => val === true, {
@@ -45,6 +46,7 @@ function RegisterContent() {
     defaultValues: {
       fullName: '',
       email: '',
+      phone: '',
       password: '',
       confirmPassword: '',
       acceptTerms: false,
@@ -54,7 +56,7 @@ function RegisterContent() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      await register(data.fullName, data.email, data.password);
+      await register(data.fullName, data.email, data.password, data.phone);
       toast.success('Conta criada com sucesso!');
       router.push(redirect ?? '/');
     } catch (error: any) {
@@ -109,6 +111,20 @@ function RegisterContent() {
           {form.formState.errors.email && (
             <p className="text-xs text-red-400 mt-1">{form.formState.errors.email.message}</p>
           )}
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-50 block mb-2">WhatsApp</label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
+            <Input
+              type="tel"
+              placeholder="(11) 9 9999-9999"
+              {...form.register('phone')}
+              className="pl-10"
+              disabled={isLoading}
+            />
+          </div>
         </div>
 
         <div>

@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { nanoid } from 'nanoid';
 import * as QRCode from 'qrcode';
@@ -11,7 +12,10 @@ import { generatePixPayload } from '@/common/utils/pix.util';
 
 @Injectable()
 export class PaymentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private whatsapp: WhatsAppService,
+  ) {}
 
   async getPaymentStatus(poolId: string, userId: string) {
     const pool = await this.prisma.pool.findUnique({ where: { id: poolId } });
@@ -215,12 +219,27 @@ export class PaymentsService {
     await this.prisma.notification.create({
       data: {
         userId: targetUserId,
-        title: '✅ Pagamento confirmado!',
+        title: 'Pagamento confirmado!',
         message: `Seu pagamento no bolão "${pool.name}" foi confirmado. Você já está participando!`,
         type: 'PAYMENT_CONFIRMED',
         poolId,
       },
     });
+
+    // WhatsApp
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { phone: true, whatsappOptIn: true },
+    });
+    if (targetUser?.whatsappOptIn && targetUser.phone) {
+      await this.whatsapp.sendText({
+        phone: targetUser.phone,
+        message:
+          `*Bolão Pro* — pagamento confirmado!\n\n` +
+          `Seu pagamento no bolão *${pool.name}* foi confirmado.\n` +
+          `Abra o app e registre seus palpites!`,
+      }).catch(() => null);
+    }
 
     return { message: 'Pagamento confirmado', userId: targetUserId };
   }
@@ -349,6 +368,21 @@ export class PaymentsService {
         poolId,
       },
     });
+
+    // WhatsApp
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { phone: true, whatsappOptIn: true },
+    });
+    if (targetUser?.whatsappOptIn && targetUser.phone) {
+      await this.whatsapp.sendText({
+        phone: targetUser.phone,
+        message:
+          `*Bolão Pro* — pagamento nao confirmado\n\n` +
+          `Seu pagamento no bolao *${pool.name}* nao foi confirmado.\n` +
+          `Entre em contato com o organizador para resolver.`,
+      }).catch(() => null);
+    }
 
     return { message: 'Pagamento marcado como não concluído' };
   }

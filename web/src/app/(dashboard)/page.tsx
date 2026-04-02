@@ -10,6 +10,7 @@ import { FullPageSkeleton } from '@/components/shared/loading-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Trophy, Plus, TrendingUp, Vote } from 'lucide-react';
 import { NewFeatureBanner } from '@/components/shared/new-feature-banner';
+import { WhatsAppBanner } from '@/components/shared/whatsapp-banner';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -32,6 +33,9 @@ export default function DashboardPage() {
           Acompanhe seus bolões e atualize seus palpites
         </p>
       </div>
+
+      {/* WhatsApp banner — aparece só 1x, some quando opt-in ativo */}
+      <WhatsAppBanner />
 
       {/* New feature banner — aparece só 1x por usuário */}
       <NewFeatureBanner

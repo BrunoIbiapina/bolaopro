@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, UseGuards, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
@@ -41,5 +41,34 @@ export class UsersController {
   @ApiOperation({ summary: 'Get current user statistics' })
   getStats(@CurrentUser() user: JwtPayload) {
     return this.usersService.getStats(user.id);
+  }
+
+  // ─── WhatsApp ─────────────────────────────────────────────────
+
+  @Post('me/whatsapp/send-otp')
+  @ApiOperation({ summary: 'Envia código OTP para verificar WhatsApp' })
+  sendWhatsAppOtp(@CurrentUser() user: JwtPayload) {
+    return this.usersService.sendWhatsAppOtp(user.id);
+  }
+
+  @Post('me/whatsapp/verify-otp')
+  @ApiOperation({ summary: 'Verifica código OTP e ativa notificações WhatsApp' })
+  verifyWhatsAppOtp(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { code: string },
+  ) {
+    return this.usersService.verifyWhatsAppOtp(user.id, body.code);
+  }
+
+  @Delete('me/whatsapp')
+  @ApiOperation({ summary: 'Desativa notificações por WhatsApp' })
+  disableWhatsApp(@CurrentUser() user: JwtPayload) {
+    return this.usersService.disableWhatsApp(user.id);
+  }
+
+  @Post('me/whatsapp/test')
+  @ApiOperation({ summary: 'Envia mensagem de teste para o número do perfil' })
+  testWhatsApp(@CurrentUser() user: JwtPayload) {
+    return this.usersService.testWhatsApp(user.id);
   }
 }

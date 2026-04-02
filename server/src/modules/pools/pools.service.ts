@@ -3,8 +3,10 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { CreatePoolDto } from './dto/create-pool.dto';
 import { UpdatePoolDto } from './dto/update-pool.dto';
 import { JoinPoolDto } from './dto/join-pool.dto';
@@ -12,7 +14,12 @@ import { nanoid } from 'nanoid';
 
 @Injectable()
 export class PoolsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(PoolsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private whatsapp: WhatsAppService,
+  ) {}
 
   async createPool(organizerId: string, createPoolDto: CreatePoolDto, role?: string) {
     const championship = await this.prisma.championship.findUnique({
@@ -78,10 +85,40 @@ export class PoolsService {
       });
     }
 
+    // Notificar organizador com card de compartilhamento
+    this.notifyPoolCreated(organizerId, pool).catch((err) =>
+      this.logger.warn(`Falha ao notificar criação do bolão: ${err}`),
+    );
+
     return {
       ...pool,
       memberCount: organizerParticipates ? 1 : 0,
     };
+  }
+
+  private async notifyPoolCreated(organizerId: string, pool: any): Promise<void> {
+    const organizer = await this.prisma.user.findUnique({
+      where: { id: organizerId },
+      select: { phone: true, whatsappOptIn: true },
+    });
+
+    if (!organizer?.whatsappOptIn || !organizer.phone) return;
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const inviteUrl = `${frontendUrl}/invite/${pool.inviteCode}`;
+    const entryFee = pool.entryFee > 0
+      ? `R$ ${Number(pool.entryFee).toFixed(2)}`
+      : 'Gratuito';
+    const championship = pool.championship?.name ?? 'Bolão Pro';
+
+    await this.whatsapp.sendLink({
+      phone: organizer.phone,
+      message: `*Bolão Pro* — seu bolão está pronto! Compartilhe o link abaixo com seus amigos:`,
+      linkUrl: inviteUrl,
+      title: pool.name,
+      description: `${championship} · Entrada: ${entryFee} · Vagas: ${pool.maxParticipants}`,
+      imageUrl: `${frontendUrl}/invite/${pool.inviteCode}/opengraph-image`,
+    }).catch(() => null);
   }
 
   async listUserPools(userId: string) {
@@ -515,7 +552,52 @@ export class PoolsService {
       data: { poolId: pool.id, userId, status: status as any, numCotas: cotas },
     });
 
+    // Notificações WhatsApp em background
+    this.notifyPoolJoin(pool.id, userId).catch((err) =>
+      this.logger.warn(`Falha nas notificações de entrada no bolão: ${err}`),
+    );
+
     return { ...await this.getPoolById(pool.id), numCotas: cotas, totalAmount: pool.entryFee * cotas };
+  }
+
+  private async notifyPoolJoin(poolId: string, newUserId: string): Promise<void> {
+    const [pool, newUser] = await Promise.all([
+      this.prisma.pool.findUnique({
+        where: { id: poolId },
+        include: {
+          organizer: { select: { id: true, phone: true, whatsappOptIn: true, fullName: true } },
+        },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: newUserId },
+        select: { fullName: true, phone: true, whatsappOptIn: true },
+      }),
+    ]);
+
+    if (!pool || !newUser) return;
+
+    // Notificar organizador
+    const { phone: orgPhone, whatsappOptIn: orgOptIn } = pool.organizer;
+    if (orgOptIn && orgPhone && pool.organizer.id !== newUserId) {
+      await this.whatsapp.sendText({
+        phone: orgPhone,
+        message:
+          `*Bolão Pro* — novo participante!\n\n` +
+          `*${newUser.fullName}* entrou no bolão *${pool.name}*.\n` +
+          `Abra o app para ver os participantes.`,
+      }).catch(() => null);
+    }
+
+    // Notificar o novo membro (boas-vindas)
+    if (newUser.whatsappOptIn && newUser.phone) {
+      await this.whatsapp.sendText({
+        phone: newUser.phone,
+        message:
+          `*Bolão Pro* — você entrou!\n\n` +
+          `Bem-vindo ao bolão *${pool.name}*.\n` +
+          `Abra o app e registre seus palpites antes que as partidas comecem!`,
+      }).catch(() => null);
+    }
   }
 
   async getPrizeInfo(poolId: string, userId: string) {
@@ -560,10 +642,28 @@ export class PoolsService {
       const user = await this.prisma.user.findUnique({ where: { id: requesterId }, select: { role: true } });
       if (user?.role !== 'ADMIN') throw new ForbiddenException('Apenas o organizador pode registrar pagamento de prêmio');
     }
-    return this.prisma.poolMember.update({
+
+    const result = await this.prisma.poolMember.update({
       where: { poolId_userId: { poolId, userId: winnerId } },
       data: { prizePaid: true, prizeAmount } as any,
     });
+
+    // Notificar vencedor via WhatsApp
+    const winner = await this.prisma.user.findUnique({
+      where: { id: winnerId },
+      select: { phone: true, whatsappOptIn: true },
+    });
+    if (winner?.whatsappOptIn && winner.phone) {
+      await this.whatsapp.sendText({
+        phone: winner.phone,
+        message:
+          `*Bolão Pro* — premio enviado!\n\n` +
+          `Seu premio de *R$ ${prizeAmount.toFixed(2)}* do bolao *${pool.name}* foi enviado via PIX.\n` +
+          `Verifique sua conta. Parabens!`,
+      }).catch(() => null);
+    }
+
+    return result;
   }
 
   async unmarkPrizePaid(poolId: string, winnerId: string, requesterId: string) {
@@ -649,7 +749,7 @@ export class PoolsService {
       throw new BadRequestException(`Status inválido. Use: ${allowed.join(', ')}`);
     }
 
-    return this.prisma.pool.update({
+    const pool = await this.prisma.pool.update({
       where: { id: poolId },
       data: { status: status as any },
       include: {
@@ -658,5 +758,36 @@ export class PoolsService {
         _count: { select: { members: true } },
       },
     });
+
+    // Quando finaliza o bolão, notifica todos os participantes
+    if (status === 'FINISHED') {
+      this.notifyPoolFinished(poolId, pool.name).catch((err) =>
+        this.logger.warn(`Falha ao notificar finalização do bolão: ${err}`),
+      );
+    }
+
+    return pool;
+  }
+
+  private async notifyPoolFinished(poolId: string, poolName: string): Promise<void> {
+    const members = await this.prisma.poolMember.findMany({
+      where: { poolId },
+      include: {
+        user: { select: { phone: true, whatsappOptIn: true } },
+      },
+    });
+
+    for (const member of members) {
+      const { phone, whatsappOptIn } = member.user;
+      if (!whatsappOptIn || !phone) continue;
+
+      await this.whatsapp.sendText({
+        phone,
+        message:
+          `*Bolão Pro* — resultado disponivel!\n\n` +
+          `O bolão *${poolName}* foi finalizado.\n` +
+          `Abra o app para ver sua posicao no ranking e o resultado final!`,
+      }).catch(() => null);
+    }
   }
 }

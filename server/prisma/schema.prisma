@@ -56,6 +56,10 @@ model User {
   emailVerificationToken       String?
   passwordResetToken           String?
   passwordResetTokenExpiresAt  DateTime?
+  whatsappOptIn                Boolean   @default(false)
+  whatsappVerifiedAt           DateTime?
+  whatsappOtp                  String?
+  whatsappOtpExpiresAt         DateTime?
   createdAt                    DateTime @default(now())
   updatedAt                    DateTime @updatedAt
 

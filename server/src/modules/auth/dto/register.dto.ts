@@ -15,6 +15,9 @@ export class RegisterDto {
   })
   password!: string;
 
+  @IsString()
+  phone!: string;
+
   @IsOptional()
   @IsString()
   pixKey?: string;

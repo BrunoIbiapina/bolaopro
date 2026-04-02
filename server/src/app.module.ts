@@ -14,6 +14,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FootballDataModule } from './modules/football-data/football-data.module';
 import { CausasModule } from './modules/causas/causas.module';
+import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CausasModule } from './modules/causas/causas.module';
     AuditModule,
     FootballDataModule,
     CausasModule,
+    WhatsAppModule,
   ],
 })
 export class AppModule {}
