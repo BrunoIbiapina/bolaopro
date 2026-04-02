@@ -7,7 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   ChevronRight, ChevronLeft, Plus, X, Globe, Lock,
-  Eye, EyeOff, DollarSign, Check, AlertCircle,
+  Eye, EyeOff, Check, AlertCircle, CheckCircle2,
+  Landmark, Dumbbell, Cloud, Clapperboard,
+  Briefcase, Theater, Lightbulb, ToggleLeft, ToggleRight, Hash,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,16 @@ import {
   useCreateCausa, usePublishCausa,
   CAUSA_CATEGORY_LABELS, type CausaCategory,
 } from '@/hooks/use-causas';
+
+const CATEGORY_ICONS: Record<CausaCategory, React.ElementType> = {
+  POLITICA:       Landmark,
+  ESPORTE:        Dumbbell,
+  CLIMA:          Cloud,
+  ENTRETENIMENTO: Clapperboard,
+  NEGOCIOS:       Briefcase,
+  CULTURA:        Theater,
+  OUTROS:         Lightbulb,
+};
 
 // ─── Schema ───────────────────────────────────────────────────
 
@@ -130,7 +142,9 @@ export default function NewCausaPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-12">
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center space-y-4">
-          <div className="text-5xl">🎉</div>
+          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-green-100 dark:bg-green-900/30 mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+          </div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Causa publicada!</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             Deseja participar da sua própria causa?
@@ -140,7 +154,7 @@ export default function NewCausaPage() {
               onClick={() => router.push(`/causas/${createdCausaId}?join=1`)}
               className="w-full"
             >
-              ✅ Sim, quero participar
+              <Check className="w-4 h-4 mr-2" /> Sim, quero participar
             </Button>
             <Button
               variant="outline"
@@ -222,6 +236,7 @@ export default function NewCausaPage() {
               <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(CAUSA_CATEGORY_LABELS) as CausaCategory[]).map((cat) => {
                   const meta = CAUSA_CATEGORY_LABELS[cat];
+                  const Icon = CATEGORY_ICONS[cat];
                   const selected = form.watch('category') === cat;
                   return (
                     <button
@@ -234,7 +249,7 @@ export default function NewCausaPage() {
                           : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300'
                       }`}
                     >
-                      <span>{meta.emoji}</span>
+                      <Icon className="w-4 h-4" />
                       <span>{meta.label}</span>
                     </button>
                   );
@@ -251,11 +266,12 @@ export default function NewCausaPage() {
               <Label>Tipo de previsão *</Label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: 'BINARY',  label: 'Sim / Não',  emoji: '✅', desc: 'Duas opções fixas' },
-                  { value: 'CHOICE',  label: 'Múltipla',   emoji: '🎯', desc: '2 a 8 opções' },
-                  { value: 'NUMERIC', label: 'Numérico',   emoji: '🔢', desc: 'Valor exato' },
+                  { value: 'BINARY',  label: 'Sim / Não', icon: ToggleRight, desc: 'Duas opções fixas' },
+                  { value: 'CHOICE',  label: 'Múltipla',  icon: Check,       desc: '2 a 8 opções' },
+                  { value: 'NUMERIC', label: 'Numérico',  icon: Hash,        desc: 'Valor exato' },
                 ].map((t) => {
                   const selected = type === t.value;
+                  const Icon = t.icon;
                   return (
                     <button
                       key={t.value}
@@ -267,7 +283,7 @@ export default function NewCausaPage() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
                       }`}
                     >
-                      <span className="text-xl">{t.emoji}</span>
+                      <Icon className={`w-5 h-5 ${selected ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}`} />
                       <span className={`text-xs font-semibold ${selected ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
                         {t.label}
                       </span>
@@ -281,7 +297,7 @@ export default function NewCausaPage() {
             {type === 'BINARY' && (
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                 <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  As opções <strong>Sim ✅</strong> e <strong>Não ❌</strong> serão criadas automaticamente.
+                  As opções <strong>Sim</strong> e <strong>Não</strong> serão criadas automaticamente.
                 </p>
               </div>
             )}
@@ -292,8 +308,8 @@ export default function NewCausaPage() {
                 {fields.map((field, i) => (
                   <div key={field.id} className="flex items-center gap-2">
                     <Input
-                      placeholder="Emoji (opcional)"
-                      className="w-16 text-center"
+                      placeholder="Ícone"
+                      className="w-16 text-center text-xs"
                       maxLength={4}
                       {...form.register(`options.${i}.emoji`)}
                     />
@@ -492,7 +508,7 @@ export default function NewCausaPage() {
               disabled={createMutation.isPending || publishMutation.isPending}
               className="flex-1"
             >
-              {createMutation.isPending || publishMutation.isPending ? 'Publicando...' : '🚀 Publicar Causa'}
+              {createMutation.isPending || publishMutation.isPending ? 'Publicando...' : 'Publicar Causa'}
             </Button>
           )}
         </div>

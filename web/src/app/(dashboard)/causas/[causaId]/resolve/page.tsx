@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Trophy, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Trophy, AlertTriangle, MapPin, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCausa, useCausaVotes, useResolveCausa } from '@/hooks/use-causas';
@@ -170,7 +170,11 @@ export default function ResolveCausaPage() {
               )}
             </div>
             <p className="text-xs text-gray-400">
-              Modo: {causa.numericMatchMode === 'EXACT' ? '⚠️ Exato — só ganha quem acertou o número certo' : '📍 Mais próximo — ganha quem chegou mais perto'}
+              Modo:{' '}
+              {causa.numericMatchMode === 'EXACT'
+                ? <span className="inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3 inline" /> Exato — só ganha quem acertou o número certo</span>
+                : <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 inline" /> Mais próximo — ganha quem chegou mais perto</span>
+              }
             </p>
           </div>
         )}
@@ -195,7 +199,8 @@ export default function ResolveCausaPage() {
         ) : (
           <div className="space-y-2">
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 text-sm text-amber-700 dark:text-amber-300">
-              ⚠️ Atenção: após confirmar, o resultado <strong>não pode ser alterado</strong>. Tem certeza?
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              Atenção: após confirmar, o resultado <strong>não pode ser alterado</strong>. Tem certeza?
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => setConfirmed(false)}>
@@ -206,7 +211,7 @@ export default function ResolveCausaPage() {
                 onClick={handleResolve}
                 disabled={resolveMutation.isPending}
               >
-                {resolveMutation.isPending ? 'Resolvendo...' : '✅ Confirmar'}
+                {resolveMutation.isPending ? 'Resolvendo...' : <><Check className="w-4 h-4 mr-1.5" />Confirmar</>}
               </Button>
             </div>
           </div>

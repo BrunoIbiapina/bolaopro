@@ -11,6 +11,7 @@ import { SportsModule } from './modules/sports/sports.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import { FootballDataModule } from './modules/football-data/football-data.module';
 import { CausasModule } from './modules/causas/causas.module';
 
@@ -26,6 +27,7 @@ import { CausasModule } from './modules/causas/causas.module';
         limit: 100,
       },
     ]),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,

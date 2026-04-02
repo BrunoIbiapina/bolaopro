@@ -45,7 +45,7 @@ export default function DashboardPage() {
 
       <NewFeatureBanner
         storageKey="feat_causas_v1"
-        title="🗳️ Causas — previsões sobre qualquer assunto!"
+        title="Causas — previsões sobre qualquer assunto"
         description="Crie apostas sobre eleições, clima, esporte ou qualquer evento. Vote com amigos e veja quem acerta mais. Gratuito ou com prêmio em dinheiro."
         ctaLabel="Explorar causas"
         ctaHref="/causas"

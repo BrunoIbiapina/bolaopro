@@ -3,10 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Plus, Search, TrendingUp, Clock, Users, Trophy, Lock, Globe } from 'lucide-react';
+import {
+  Plus, Search, Clock, Users, Trophy, Lock, Globe,
+  Vote, Landmark, Dumbbell, Cloud, Clapperboard,
+  Briefcase, Theater, Lightbulb,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   useCausasFeed,
   type CausaCategory,
@@ -17,19 +20,17 @@ import {
   type Causa,
 } from '@/hooks/use-causas';
 
-// ─── Filtros ─────────────────────────────────────────────────
+// ─── Ícones por categoria ─────────────────────────────────────
 
-const STATUS_TABS = [
-  { value: 'OPEN', label: 'Abertas' },
-  { value: 'RESOLVED', label: 'Resolvidas' },
-  { value: 'ALL', label: 'Todas' },
-] as const;
-
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Mais recentes' },
-  { value: 'deadline', label: 'Encerrando logo' },
-  { value: 'popular', label: 'Mais votadas' },
-] as const;
+const CATEGORY_ICONS: Record<CausaCategory, React.ElementType> = {
+  POLITICA:       Landmark,
+  ESPORTE:        Dumbbell,
+  CLIMA:          Cloud,
+  ENTRETENIMENTO: Clapperboard,
+  NEGOCIOS:       Briefcase,
+  CULTURA:        Theater,
+  OUTROS:         Lightbulb,
+};
 
 // ─── CausaCard ────────────────────────────────────────────────
 
@@ -40,8 +41,8 @@ function CausaCard({ causa }: { causa: Causa }) {
   const totalVotes = causa._count.votes;
   const deadline = formatDeadline(causa.deadlineAt);
   const isPaid = causa.entryFee > 0;
+  const CategoryIcon = CATEGORY_ICONS[causa.category];
 
-  // Calcular barras de progresso com os dados das opções (se disponíveis)
   const topOptions = causa.options.slice(0, 3);
 
   return (
@@ -51,35 +52,33 @@ function CausaCard({ causa }: { causa: Causa }) {
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cat.color}`}>
-            {cat.emoji} {cat.label}
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${cat.color}`}>
+            <CategoryIcon className="w-3 h-3" />
+            {cat.label}
           </span>
           <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>
             {status.label}
           </span>
           {isPaid && (
             <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-              💰 R$ {causa.entryFee.toFixed(0)}/cota
+              R$ {causa.entryFee.toFixed(0)}/cota
             </span>
           )}
         </div>
-        {causa.visibility === 'PRIVATE' ? (
-          <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-        ) : (
-          <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-        )}
+        {causa.visibility === 'PRIVATE'
+          ? <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          : <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        }
       </div>
 
       <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
         {causa.title}
       </h3>
 
-      {/* Barras de opções (apenas para BINARY e CHOICE com dados) */}
       {(causa.type === 'BINARY' || causa.type === 'CHOICE') && topOptions.length > 0 && (
         <div className="space-y-1.5 mb-3">
           {topOptions.map((opt) => (
             <div key={opt.id} className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400 w-5">{opt.emoji}</span>
               <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-500"
@@ -98,10 +97,9 @@ function CausaCard({ causa }: { causa: Causa }) {
       )}
 
       {causa.type === 'NUMERIC' && (
-        <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500 dark:text-gray-400">
-          <span>🔢</span>
-          <span>Previsão numérica · {causa.numericUnit ?? 'valor'}</span>
-        </div>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          Previsão numérica · {causa.numericUnit ?? 'valor'}
+        </p>
       )}
 
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
@@ -134,7 +132,21 @@ function CausaCard({ causa }: { causa: Causa }) {
   );
 }
 
-// ─── Página principal ─────────────────────────────────────────
+// ─── Filtros ──────────────────────────────────────────────────
+
+const STATUS_TABS = [
+  { value: 'OPEN',     label: 'Abertas' },
+  { value: 'RESOLVED', label: 'Resolvidas' },
+  { value: 'ALL',      label: 'Todas' },
+] as const;
+
+const SORT_OPTIONS = [
+  { value: 'newest',   label: 'Mais recentes' },
+  { value: 'deadline', label: 'Encerrando logo' },
+  { value: 'popular',  label: 'Mais votadas' },
+] as const;
+
+// ─── Página ───────────────────────────────────────────────────
 
 export default function CausasPage() {
   const [filters, setFilters] = useState<CausasFilters>({
@@ -146,24 +158,22 @@ export default function CausasPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CausaCategory | undefined>();
 
-  const { data, isLoading, isError } = useCausasFeed({
+  const { data, isLoading, isError, refetch } = useCausasFeed({
     ...filters,
     category: selectedCategory,
     search: search.trim() || undefined,
   });
 
-  const setStatus = (s: typeof filters.status) =>
-    setFilters((f) => ({ ...f, status: s, page: 1 }));
-  const setSortBy = (s: typeof filters.sortBy) =>
-    setFilters((f) => ({ ...f, sortBy: s, page: 1 }));
-  const setPage = (p: number) => setFilters((f) => ({ ...f, page: p }));
+  const setStatus  = (s: typeof filters.status)  => setFilters((f) => ({ ...f, status: s,  page: 1 }));
+  const setSortBy  = (s: typeof filters.sortBy)   => setFilters((f) => ({ ...f, sortBy: s,  page: 1 }));
+  const setPage    = (p: number)                   => setFilters((f) => ({ ...f, page: p }));
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">🗳️ Causas</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Causas</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Faça suas previsões sobre qualquer assunto
           </p>
@@ -208,27 +218,30 @@ export default function CausasPage() {
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setSelectedCategory(undefined)}
-          className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+          className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
             !selectedCategory
               ? 'bg-blue-600 text-white border-blue-600'
               : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400'
           }`}
         >
+          <Vote className="w-3 h-3" />
           Todas
         </button>
         {(Object.keys(CAUSA_CATEGORY_LABELS) as CausaCategory[]).map((cat) => {
           const meta = CAUSA_CATEGORY_LABELS[cat];
+          const Icon = CATEGORY_ICONS[cat];
           return (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat === selectedCategory ? undefined : cat)}
-              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
                 selectedCategory === cat
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400'
               }`}
             >
-              {meta.emoji} {meta.label}
+              <Icon className="w-3 h-3" />
+              {meta.label}
             </button>
           );
         })}
@@ -254,7 +267,7 @@ export default function CausasPage() {
         </div>
       </div>
 
-      {/* Lista */}
+      {/* Skeletons */}
       {isLoading && (
         <div className="grid gap-3">
           {[1, 2, 3].map((i) => (
@@ -263,27 +276,27 @@ export default function CausasPage() {
         </div>
       )}
 
+      {/* Erro */}
       {isError && (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <p>Erro ao carregar causas.</p>
-          <Button variant="ghost" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+          <p className="font-medium">Não foi possível carregar as causas.</p>
+          <Button variant="ghost" size="sm" className="mt-2" onClick={() => refetch()}>
             Tentar novamente
           </Button>
         </div>
       )}
 
+      {/* Lista */}
       {!isLoading && !isError && data && (
         <>
           {data.items.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-4xl mb-3">🗳️</p>
+              <Vote className="w-10 h-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-medium">Nenhuma causa encontrada</p>
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Que tal criar a primeira?
-              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Que tal criar a primeira?</p>
               <Link href="/causas/new">
-                <Button size="sm" className="mt-4">
-                  <Plus className="w-4 h-4 mr-1.5" /> Criar causa
+                <Button size="sm" className="mt-4 gap-1.5">
+                  <Plus className="w-4 h-4" /> Criar causa
                 </Button>
               </Link>
             </div>
@@ -295,12 +308,10 @@ export default function CausasPage() {
             </div>
           )}
 
-          {/* Paginação */}
           {data.pages > 1 && (
             <div className="flex items-center justify-center gap-2 pt-2">
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 disabled={filters.page === 1}
                 onClick={() => setPage((filters.page ?? 1) - 1)}
               >
@@ -310,8 +321,7 @@ export default function CausasPage() {
                 {filters.page} / {data.pages}
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 disabled={filters.page === data.pages}
                 onClick={() => setPage((filters.page ?? 1) + 1)}
               >

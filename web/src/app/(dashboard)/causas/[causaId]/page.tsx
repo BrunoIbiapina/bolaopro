@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Clock, Users, Trophy, Share2, Check, X,
-  Crown, Lock, Globe, AlertCircle, ChevronRight,
+  Lock, Globe, ChevronRight, CheckCircle2, XCircle, Medal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -271,11 +271,17 @@ export default function CausaDetailPage() {
 
           {/* Meu resultado */}
           {myVote != null && (
-            <div className={`mt-3 p-3 rounded-xl ${myVote.isCorrect ? 'bg-green-500/30' : 'bg-white/10'}`}>
+            <div className={`mt-3 p-3 rounded-xl flex items-center gap-2 ${myVote.isCorrect ? 'bg-green-500/30' : 'bg-white/10'}`}>
               {myVote.isCorrect ? (
-                <p className="font-semibold">🎉 Você acertou!{myVote.prizeAmount ? ` Prêmio: R$ ${myVote.prizeAmount.toFixed(2)}` : ''}</p>
+                <>
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <p className="font-semibold">Você acertou!{myVote.prizeAmount ? ` Prêmio: R$ ${myVote.prizeAmount.toFixed(2)}` : ''}</p>
+                </>
               ) : (
-                <p>😔 Você errou desta vez.</p>
+                <>
+                  <XCircle className="w-4 h-4 flex-shrink-0" />
+                  <p>Você errou desta vez.</p>
+                </>
               )}
             </div>
           )}
@@ -286,7 +292,7 @@ export default function CausaDetailPage() {
       {showJoinPrompt && causa.status === 'OPEN' && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-4">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-3">
-            💡 Deseja participar da sua própria causa?
+            Deseja participar da sua própria causa?
           </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => {
@@ -397,8 +403,8 @@ export default function CausaDetailPage() {
           {myVote?.numericValue != null && (
             <p className="text-xs text-gray-400">
               Seu palpite: <strong className="text-gray-700 dark:text-gray-300">{myVote.numericValue} {causa.numericUnit}</strong>
-              {myVote.isCorrect === true && ' ✅'}
-              {myVote.isCorrect === false && ' ❌'}
+              {myVote.isCorrect === true && <CheckCircle2 className="w-3 h-3 inline ml-1 text-green-500" />}
+              {myVote.isCorrect === false && <XCircle className="w-3 h-3 inline ml-1 text-red-400" />}
             </p>
           )}
         </div>
@@ -419,7 +425,7 @@ export default function CausaDetailPage() {
                   : entry.rank === 3 ? 'bg-amber-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                 }`}>
-                  {entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank - 1] : entry.rank}
+                  {entry.rank <= 3 ? <Medal className="w-3 h-3" /> : entry.rank}
                 </span>
                 {entry.user.avatar ? (
                   <img src={entry.user.avatar} className="w-6 h-6 rounded-full object-cover" />
@@ -451,8 +457,8 @@ export default function CausaDetailPage() {
           </p>
           {canResolve && (
             <Link href={`/causas/${causaId}/resolve`}>
-              <Button size="sm" className="w-full mb-2">
-                🏆 Definir resultado
+              <Button size="sm" className="w-full mb-2 gap-1.5">
+                <Trophy className="w-4 h-4" /> Definir resultado
               </Button>
             </Link>
           )}

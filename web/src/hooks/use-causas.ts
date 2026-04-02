@@ -356,14 +356,14 @@ export function useCancelCausa() {
 
 // ─── Helpers ──────────────────────────────────────────────────
 
-export const CAUSA_CATEGORY_LABELS: Record<CausaCategory, { label: string; emoji: string; color: string }> = {
-  POLITICA:      { label: 'Política',       emoji: '🗳️', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  ESPORTE:       { label: 'Esporte',         emoji: '⚽', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
-  CLIMA:         { label: 'Clima',           emoji: '🌤️', color: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
-  ENTRETENIMENTO:{ label: 'Entretenimento',  emoji: '🎬', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
-  NEGOCIOS:      { label: 'Negócios',        emoji: '💼', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
-  CULTURA:       { label: 'Cultura',         emoji: '🎭', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
-  OUTROS:        { label: 'Outros',          emoji: '💡', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
+export const CAUSA_CATEGORY_LABELS: Record<CausaCategory, { label: string; color: string }> = {
+  POLITICA:       { label: 'Política',       color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+  ESPORTE:        { label: 'Esporte',         color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  CLIMA:          { label: 'Clima',           color: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' },
+  ENTRETENIMENTO: { label: 'Entretenimento',  color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+  NEGOCIOS:       { label: 'Negócios',        color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' },
+  CULTURA:        { label: 'Cultura',         color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300' },
+  OUTROS:         { label: 'Outros',          color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
 };
 
 export const CAUSA_STATUS_LABELS: Record<CausaStatus, { label: string; color: string }> = {
