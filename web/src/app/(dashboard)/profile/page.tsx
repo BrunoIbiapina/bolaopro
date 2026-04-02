@@ -24,6 +24,7 @@ import {
   Check,
   X,
   Banknote,
+  MessageCircle,
 } from 'lucide-react';
 
 const profileSchema = z.object({
@@ -281,6 +282,65 @@ export default function ProfilePage() {
                   <p className="text-sm text-gray-500 italic">Não cadastrada — necessária para receber prêmios</p>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* WhatsApp Notifications Section */}
+      <div className="rounded-2xl bg-surface border border-surface-light overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-light">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-green-600/15 flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 text-green-400" />
+            </div>
+            <span className="font-semibold text-gray-100">Notificações WhatsApp</span>
+          </div>
+        </div>
+        <div className="px-5 py-4">
+          {!(user as any)?.phone ? (
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-sm text-gray-300 font-medium">Cadastre seu telefone primeiro</p>
+                <p className="text-xs text-gray-500 mt-0.5">Edite seu perfil acima e adicione um número de telefone para ativar as notificações.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                {(user as any)?.whatsappOptIn ? (
+                  <>
+                    <p className="text-sm text-green-400 font-medium">Notificações ativas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Voce recebe alertas de resultados, pagamentos e mais via WhatsApp.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-300 font-medium">Notificações desativadas</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Ative para receber resultados de partidas, confirmacoes de pagamento e mais.</p>
+                  </>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant={(user as any)?.whatsappOptIn ? 'secondary' : 'default'}
+                className={`shrink-0 gap-1.5 ${(user as any)?.whatsappOptIn ? '' : 'bg-green-600 hover:bg-green-700 text-white border-green-600'}`}
+                onClick={async () => {
+                  try {
+                    const newValue = !(user as any)?.whatsappOptIn;
+                    const response = await api.patch('/users/me', { whatsappOptIn: newValue });
+                    updateUser(response.data);
+                    toast.success(newValue ? 'Notificacoes WhatsApp ativadas!' : 'Notificacoes WhatsApp desativadas.');
+                  } catch {
+                    toast.error('Erro ao atualizar preferencia');
+                  }
+                }}
+              >
+                {(user as any)?.whatsappOptIn ? (
+                  <><X className="w-3.5 h-3.5" /> Desativar</>
+                ) : (
+                  <><Check className="w-3.5 h-3.5" /> Ativar</>
+                )}
+              </Button>
             </div>
           )}
         </div>

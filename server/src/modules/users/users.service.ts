@@ -12,6 +12,8 @@ const USER_SELECT = {
   avatar: true,
   bio: true,
   role: true,
+  whatsappOptIn: true,
+  whatsappVerifiedAt: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -55,6 +57,7 @@ export class UsersService {
         ...(updateProfileDto.pixKey !== undefined && { pixKey: updateProfileDto.pixKey || null }),
         ...(updateProfileDto.avatar !== undefined && { avatar: updateProfileDto.avatar }),
         ...(updateProfileDto.bio !== undefined && { bio: updateProfileDto.bio }),
+        ...(updateProfileDto.whatsappOptIn !== undefined && { whatsappOptIn: updateProfileDto.whatsappOptIn }),
       },
       select: USER_SELECT,
     });
