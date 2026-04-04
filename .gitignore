@@ -1,2 +1,35 @@
-.vercel
-.env*.local
+# Dependencies
+node_modules/
+
+# Testing
+/coverage
+
+# Production
+/dist
+
+# Misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+
+# Uploads
+/uploads/*
+!/uploads/.gitkeep
+
+# Nohup
+nohup.out
