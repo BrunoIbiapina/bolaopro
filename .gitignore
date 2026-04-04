@@ -1,35 +1,26 @@
 # Dependencies
 node_modules/
 
-# Testing
-/coverage
-
-# Production
-/dist
-
-# Misc
-.DS_Store
-*.pem
-*.log
-npm-debug.log*
-
 # Environment
 .env
 .env.local
 .env.*.local
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Misc
+.DS_Store
+*.log
+nohup.out
 
 # OS
 Thumbs.db
 
-# Uploads
-/uploads/*
-!/uploads/.gitkeep
+# IDE
+.vscode/
+.idea/
 
-# Nohup
-nohup.out
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Vercel
+.vercel
