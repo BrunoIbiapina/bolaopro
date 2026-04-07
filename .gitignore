@@ -24,3 +24,4 @@ server/uploads/*
 
 # Vercel
 .vercel
+.aider*
