@@ -91,9 +91,12 @@ export default function NewCausaPage() {
   const entryFee = form.watch('entryFee');
 
   const handleNext = async () => {
+    const step2Fields: (keyof FormData)[] = ['type', 'numericUnit', 'numericMatchMode'];
+    if (type === 'CHOICE') step2Fields.push('options');
+
     const fieldsToValidate: (keyof FormData)[][] = [
       ['title', 'description', 'category'],
-      ['type', 'options', 'numericUnit', 'numericMatchMode'],
+      step2Fields,
       ['deadlineDate', 'deadlineTime', 'visibility', 'entryFee', 'cotasPerParticipant'],
     ];
     const valid = await form.trigger(fieldsToValidate[step - 1] as any);
@@ -101,7 +104,15 @@ export default function NewCausaPage() {
   };
 
   const handleSubmit = async () => {
-    const valid = await form.trigger();
+    const fieldsToValidate: (keyof FormData)[] = [
+      'title', 'category', 'type',
+      'deadlineDate', 'deadlineTime', 'visibility',
+      'entryFee', 'cotasPerParticipant',
+      'numericUnit', 'numericMatchMode',
+      'hideVoteCount', 'allowComments',
+    ];
+    if (type === 'CHOICE') fieldsToValidate.push('options');
+    const valid = await form.trigger(fieldsToValidate as any);
     if (!valid) return;
 
     const values = form.getValues();
@@ -295,10 +306,24 @@ export default function NewCausaPage() {
             </div>
 
             {type === 'BINARY' && (
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  As opções <strong>Sim</strong> e <strong>Não</strong> serão criadas automaticamente.
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+                  Opções criadas automaticamente:
                 </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Sim', emoji: '✅' },
+                    { label: 'Não', emoji: '❌' },
+                  ].map((opt) => (
+                    <div
+                      key={opt.label}
+                      className="flex items-center gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 opacity-70"
+                    >
+                      <span className="text-lg">{opt.emoji}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{opt.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

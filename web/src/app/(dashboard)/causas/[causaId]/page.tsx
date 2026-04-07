@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Clock, Users, Trophy, Share2, Check, X,
   Lock, Globe, ChevronRight, CheckCircle2, XCircle, Medal,
+  Copy, MessageCircle, QrCode, Banknote, AlertCircle, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +15,142 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   useCausa, useCausaVotes, useMyVote,
   useCausaLeaderboard, useVoteCausa, useCreatorJoin,
-  useRemoveVote, useCancelCausa,
+  useRemoveVote, useCancelCausa, useCausaParticipants,
+  useCausaPayment, useGenerateCausaPayment, useNotifyCausaPaid,
   CAUSA_CATEGORY_LABELS, CAUSA_STATUS_LABELS, formatDeadline,
   type CausaOption,
 } from '@/hooks/use-causas';
+
+// ─── Modal de compartilhamento ───────────────────────────────
+
+function ShareModal({
+  causa,
+  onClose,
+}: {
+  causa: any;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const inviteUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/causas/invite/${causa.inviteCode}`
+    : '';
+
+  const cat = CAUSA_CATEGORY_LABELS[causa.category as keyof typeof CAUSA_CATEGORY_LABELS];
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleNativeShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: causa.title,
+        text: `Participe da causa: ${causa.title}`,
+        url: inviteUrl,
+      });
+    }
+  };
+
+  const handleWhatsApp = () => {
+    const text = encodeURIComponent(`Participe da causa: *${causa.title}*\n${inviteUrl}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-6 sm:pb-0"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Preview card */}
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white">
+          <div className="flex items-start justify-between mb-3">
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full bg-white/20 backdrop-blur`}>
+              {cat?.emoji} {cat?.label}
+            </span>
+            <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <h2 className="text-lg font-bold leading-snug mb-3">{causa.title}</h2>
+          <div className="flex items-center gap-4 text-sm text-blue-100">
+            <span className="flex items-center gap-1">
+              <Users className="w-3.5 h-3.5" />
+              {causa._count.votes} participante{causa._count.votes !== 1 ? 's' : ''}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {formatDeadline(causa.deadlineAt)}
+            </span>
+            {causa.entryFee > 0 && (
+              <span className="flex items-center gap-1 text-yellow-300 font-semibold">
+                <Trophy className="w-3.5 h-3.5" />
+                R$ {causa.prizePool.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Link + botões */}
+        <div className="p-5 space-y-4">
+          {/* Link copiável */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Link de convite
+            </p>
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+              <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 truncate">{inviteUrl}</span>
+              <button
+                onClick={handleCopy}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex-shrink-0 ${
+                  copied
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200'
+                }`}
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copiado!' : 'Copiar'}
+              </button>
+            </div>
+          </div>
+
+          {/* Ações de share */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={handleWhatsApp}
+              className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-semibold transition-colors"
+            >
+              <MessageCircle className="w-4 h-4" />
+              WhatsApp
+            </button>
+            {'share' in navigator ? (
+              <button
+                onClick={handleNativeShare}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                Compartilhar
+              </button>
+            ) : (
+              <button
+                onClick={handleCopy}
+                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-semibold transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+                Copiar link
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Barra de progresso por opção ────────────────────────────
 
@@ -101,6 +234,7 @@ export default function CausaDetailPage() {
 
   const joinParam = searchParams.get('join');
   const [showJoinPrompt, setShowJoinPrompt] = useState(joinParam === '1');
+  const [showShareModal, setShowShareModal] = useState(false);
   const [numericInput, setNumericInput] = useState('');
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [votingCotas, setVotingCotas] = useState(1);
@@ -116,6 +250,14 @@ export default function CausaDetailPage() {
   const creatorJoinMutation = useCreatorJoin();
   const removeVoteMutation = useRemoveVote();
   const cancelMutation = useCancelCausa();
+  const { data: participants } = useCausaParticipants(causaId);
+
+  // Payment
+  const isPaidCausa = (causa?.entryFee ?? 0) > 0;
+  const { data: paymentData } = useCausaPayment(isPaidCausa && !!user ? causaId : null);
+  const generatePayment = useGenerateCausaPayment();
+  const notifyPaid = useNotifyCausaPaid();
+  const [copiedPix, setCopiedPix] = useState(false);
 
   const isCreator = user?.id === causa?.creatorId;
   const isAdmin = user?.role === 'ADMIN';
@@ -152,6 +294,14 @@ export default function CausaDetailPage() {
     refetchVotes();
   };
 
+  const handleCopyPix = () => {
+    if (paymentData?.pixPayload) {
+      navigator.clipboard.writeText(paymentData.pixPayload);
+      setCopiedPix(true);
+      setTimeout(() => setCopiedPix(false), 2500);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-4">
@@ -179,6 +329,9 @@ export default function CausaDetailPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+      {showShareModal && (
+        <ShareModal causa={causa} onClose={() => setShowShareModal(false)} />
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <button
@@ -196,7 +349,7 @@ export default function CausaDetailPage() {
             </Link>
           )}
           <button
-            onClick={() => navigator.clipboard.writeText(window.location.href)}
+            onClick={() => setShowShareModal(true)}
             className="p-2 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
           >
             <Share2 className="w-4 h-4" />
@@ -410,6 +563,113 @@ export default function CausaDetailPage() {
         </div>
       )}
 
+      {/* Pagamento PIX */}
+      {isPaidCausa && myVote && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <Banknote className="w-4 h-4" /> Pagamento
+          </h2>
+
+          {/* Sem pagamento gerado ainda */}
+          {(!paymentData || paymentData.paymentStatus === 'NOT_REQUESTED') && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Valor a pagar: <strong className="text-gray-900 dark:text-white">
+                  R$ {(causa.entryFee * (myVote.numCotas ?? 1)).toFixed(2)}
+                </strong>
+                {(myVote.numCotas ?? 1) > 1 && (
+                  <span className="text-xs text-gray-400 ml-1">({myVote.numCotas} cotas)</span>
+                )}
+              </p>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => generatePayment.mutate(causaId)}
+                disabled={generatePayment.isPending}
+              >
+                <QrCode className="w-4 h-4" />
+                Gerar PIX para pagar
+              </Button>
+            </div>
+          )}
+
+          {/* Pagamento gerado — pendente */}
+          {paymentData && paymentData.paymentStatus === 'PENDING' && paymentData.pixPayload && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {paymentData.notifiedAt
+                  ? 'Aguardando confirmação do administrador'
+                  : 'Pagamento pendente — copie o código PIX abaixo'}
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
+                  PIX Copia e Cola
+                </p>
+                <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 break-all font-mono leading-relaxed">
+                    {paymentData.pixPayload}
+                  </span>
+                  <button
+                    onClick={handleCopyPix}
+                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all flex-shrink-0 mt-0.5 ${
+                      copiedPix
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200'
+                    }`}
+                  >
+                    {copiedPix ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedPix ? 'Copiado!' : 'Copiar'}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Chave PIX: <span className="font-medium text-gray-600 dark:text-gray-300">{paymentData.pixKey}</span>
+                  {' · '}Valor: <strong>R$ {paymentData.amount?.toFixed(2)}</strong>
+                </p>
+              </div>
+
+              {!paymentData.notifiedAt && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1.5"
+                  onClick={() => notifyPaid.mutate(causaId)}
+                  disabled={notifyPaid.isPending}
+                >
+                  <Check className="w-4 h-4" />
+                  Já paguei — avisar admin
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Pagamento confirmado */}
+          {paymentData && paymentData.paymentStatus === 'PAID' && (
+            <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+              <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-700 dark:text-green-400">Pagamento confirmado</p>
+                <p className="text-xs text-green-600/70 dark:text-green-500 mt-0.5">
+                  Seu voto está bloqueado e garantido.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Pagamento rejeitado */}
+          {paymentData && paymentData.paymentStatus === 'FAILED' && (
+            <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400">Pagamento não confirmado</p>
+                <p className="text-xs text-red-500/70 dark:text-red-400/70 mt-0.5">Entre em contato com o organizador.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Leaderboard */}
       {causa.status === 'RESOLVED' && leaderboard && leaderboard.length > 0 && (
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-3">
@@ -441,6 +701,73 @@ export default function CausaDetailPage() {
                 {entry.prizeAmount && (
                   <span className="text-sm font-semibold text-green-600 dark:text-green-400">
                     R$ {entry.prizeAmount.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Participantes */}
+      {participants && participants.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+            <Users className="w-4 h-4" /> Participantes ({participants.length})
+          </h2>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            {participants.map((p) => (
+              <div
+                key={p.userId}
+                className={`flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 ${
+                  p.isCorrect === true
+                    ? 'opacity-100'
+                    : p.isCorrect === false
+                    ? 'opacity-60'
+                    : ''
+                }`}
+              >
+                {/* Avatar */}
+                {p.user.avatar ? (
+                  <img src={p.user.avatar} className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    {p.user.fullName[0]}
+                  </div>
+                )}
+
+                {/* Nome */}
+                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                  {p.user.fullName}
+                  {p.numCotas > 1 && (
+                    <span className="text-xs text-gray-400 ml-1">({p.numCotas}x)</span>
+                  )}
+                </span>
+
+                {/* Voto */}
+                {p.optionEmoji || p.optionLabel ? (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex-shrink-0">
+                    {p.optionEmoji && <span className="mr-1">{p.optionEmoji}</span>}
+                    {p.optionLabel}
+                  </span>
+                ) : p.numericValue != null ? (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex-shrink-0">
+                    {p.numericValue} {causa.numericUnit ?? ''}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 flex-shrink-0">votou</span>
+                )}
+
+                {/* Resultado (só após resolução) */}
+                {p.isCorrect === true && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400 flex-shrink-0">
+                    <Check className="w-3.5 h-3.5" />
+                    {p.prizeAmount ? `R$ ${p.prizeAmount.toFixed(2)}` : 'Acertou'}
+                  </span>
+                )}
+                {p.isCorrect === false && (
+                  <span className="flex items-center gap-1 text-xs text-red-400 flex-shrink-0">
+                    <X className="w-3.5 h-3.5" /> Errou
                   </span>
                 )}
               </div>

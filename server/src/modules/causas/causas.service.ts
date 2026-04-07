@@ -126,23 +126,30 @@ export class CausasService {
 
   // ── Feed público ──────────────────────────────────────────────
 
-  async listPublic(dto: ListCausasDto) {
+  async listPublic(dto: ListCausasDto, userId?: string) {
     const page = dto.page ?? 1;
     const limit = Math.min(dto.limit ?? 20, 50);
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      visibility: 'PUBLIC',
-    };
-
-    // Filtro de status
+    // Status filter
+    let statusFilter: any;
     if (!dto.status || dto.status === CausaStatusFilter.OPEN) {
-      where.status = 'OPEN';
+      statusFilter = 'OPEN';
     } else if (dto.status !== CausaStatusFilter.ALL) {
-      where.status = dto.status;
+      statusFilter = dto.status;
     } else {
-      where.status = { in: ['OPEN', 'CLOSED', 'RESOLVED'] };
+      statusFilter = { in: ['OPEN', 'CLOSED', 'RESOLVED'] };
     }
+
+    // Visibilidade: públicas + causas privadas do próprio usuário
+    const visibilityFilter = userId
+      ? { OR: [{ visibility: 'PUBLIC' }, { creatorId: userId }] }
+      : { visibility: 'PUBLIC' };
+
+    const where: any = {
+      ...visibilityFilter,
+      status: statusFilter,
+    };
 
     if (dto.category) where.category = dto.category;
     if (dto.type) where.type = dto.type;
@@ -281,6 +288,41 @@ export class CausasService {
         };
       }),
     };
+  }
+
+  // ── Lista de participantes com seus votos ─────────────────────
+
+  async getParticipants(causaId: string, requesterId?: string) {
+    const causa = await this.findOneOrFail(causaId);
+
+    // Se hideVoteCount está ativo e causa ainda aberta: esconde a opção escolhida
+    // (só revela quem votou, não em quê)
+    const hideChoice =
+      causa.hideVoteCount &&
+      causa.status === 'OPEN' &&
+      requesterId !== causa.creatorId;
+
+    const votes = await this.prisma.causaVote.findMany({
+      where: { causaId },
+      include: {
+        user: { select: { id: true, fullName: true, avatar: true } },
+        option: { select: { id: true, label: true, emoji: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return votes.map((v) => ({
+      userId: v.userId,
+      user: v.user,
+      optionId: hideChoice ? null : v.optionId,
+      optionLabel: hideChoice ? null : v.option?.label ?? null,
+      optionEmoji: hideChoice ? null : v.option?.emoji ?? null,
+      numericValue: hideChoice ? null : v.numericValue,
+      numCotas: v.numCotas,
+      isCorrect: causa.status === 'RESOLVED' ? v.isCorrect : null,
+      prizeAmount: causa.status === 'RESOLVED' ? v.prizeAmount : null,
+      votedAt: v.createdAt,
+    }));
   }
 
   // ── Leaderboard de acertadores ────────────────────────────────

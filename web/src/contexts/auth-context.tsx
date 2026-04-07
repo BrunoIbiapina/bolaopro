@@ -30,8 +30,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const response = await api.get<User>('/users/me');
           setUser(response.data);
         }
-      } catch (error) {
-        clearTokens();
+      } catch (error: any) {
+        // Só limpa tokens em erro de autenticação (401), não em erros de rede
+        if (error?.response?.status === 401) {
+          clearTokens();
+        }
       } finally {
         setIsLoading(false);
       }

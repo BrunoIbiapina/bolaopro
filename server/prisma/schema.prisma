@@ -70,6 +70,7 @@ model User {
   auditLogs          AuditLog[]
   causasCreated      Causa[]         @relation("causaCreator")
   causaVotes         CausaVote[]
+  causaPayments      CausaPayment[]
 
   @@index([email])
 }
@@ -329,8 +330,9 @@ model Causa {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  options  CausaOption[]
-  votes    CausaVote[]
+  options   CausaOption[]
+  votes     CausaVote[]
+  payments  CausaPayment[]
 
   @@index([creatorId])
   @@index([status])
@@ -376,6 +378,27 @@ model CausaVote {
   @@index([causaId])
   @@index([userId])
   @@index([isCorrect])
+}
+
+model CausaPayment {
+  id          String        @id @default(cuid())
+  causaId     String
+  userId      String
+  causa       Causa         @relation(fields: [causaId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Float
+  numCotas    Int           @default(1)
+  status      PaymentStatus @default(PENDING)
+  notifiedAt  DateTime?     // user said they paid
+  confirmedBy String?       // admin userId who confirmed
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([causaId, userId])
+  @@index([causaId])
+  @@index([userId])
+  @@index([status])
 }
 
 model AuditLog {

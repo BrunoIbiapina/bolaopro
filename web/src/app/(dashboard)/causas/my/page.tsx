@@ -62,11 +62,22 @@ function MyCausaCard({ causa, myVote }: { causa: Causa; myVote?: any }) {
   );
 }
 
+const STATUS_FILTER = [
+  { value: 'ALL',      label: 'Todas' },
+  { value: 'OPEN',     label: 'Abertas' },
+  { value: 'RESOLVED', label: 'Resolvidas' },
+  { value: 'CLOSED',   label: 'Fechadas' },
+] as const;
+
 export default function MyCausasPage() {
   const { data, isLoading } = useMyCausas();
   const [tab, setTab] = useState<'created' | 'voted'>('voted');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'OPEN' | 'RESOLVED' | 'CLOSED'>('ALL');
 
-  const items = tab === 'created' ? data?.created ?? [] : data?.voted ?? [];
+  const rawItems = tab === 'created' ? data?.created ?? [] : data?.voted ?? [];
+  const items = statusFilter === 'ALL'
+    ? rawItems
+    : rawItems.filter((c: any) => c.status === statusFilter);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
@@ -95,6 +106,23 @@ export default function MyCausasPage() {
             }`}
           >
             {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtro de status */}
+      <div className="flex gap-1.5 flex-wrap">
+        {STATUS_FILTER.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setStatusFilter(s.value)}
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+              statusFilter === s.value
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400'
+            }`}
+          >
+            {s.label}
           </button>
         ))}
       </div>

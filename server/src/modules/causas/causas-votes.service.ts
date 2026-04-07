@@ -5,11 +5,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CausasPaymentService } from './causas-payment.service';
 import { VoteCausaDto } from './dto/vote-causa.dto';
 
 @Injectable()
 export class CausasVotesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private paymentService: CausasPaymentService,
+  ) {}
 
   // ── Votar / Alterar voto ──────────────────────────────────────
 
@@ -22,6 +26,12 @@ export class CausasVotesService {
     if (!causa) throw new NotFoundException('Causa não encontrada');
     if (causa.status !== 'OPEN') throw new BadRequestException('Causa não está aberta para votação');
     if (new Date() > causa.deadlineAt) throw new BadRequestException('Prazo de votação encerrado');
+
+    // Voto bloqueado após confirmação de pagamento
+    if (causa.entryFee > 0) {
+      const locked = await this.paymentService.isVoteLocked(causaId, userId);
+      if (locked) throw new ForbiddenException('Voto bloqueado após confirmação de pagamento');
+    }
 
     // Criador não pode votar na própria causa (mas pode optar ao publicar)
     if (causa.creatorId === userId) {
@@ -112,6 +122,10 @@ export class CausasVotesService {
     if (!causa) throw new NotFoundException('Causa não encontrada');
     if (causa.status !== 'OPEN' || new Date() > causa.deadlineAt) {
       throw new BadRequestException('Não é possível remover voto após o prazo');
+    }
+    if (causa.entryFee > 0) {
+      const locked = await this.paymentService.isVoteLocked(causaId, userId);
+      if (locked) throw new ForbiddenException('Voto bloqueado após confirmação de pagamento');
     }
 
     await this.prisma.causaVote.delete({

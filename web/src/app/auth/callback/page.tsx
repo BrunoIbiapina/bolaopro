@@ -22,7 +22,6 @@ function AuthCallbackContent() {
       return;
     }
 
-    // Salva os tokens nos cookies
     setTokens(token, refresh);
 
     // Normaliza o redirect (evita string 'null' ou caminhos inválidos)

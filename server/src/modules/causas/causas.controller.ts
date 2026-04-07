@@ -4,9 +4,11 @@ import {
   HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '@/common/guards/optional-jwt-auth.guard';
 import { CausasService } from './causas.service';
 import { CausasVotesService } from './causas-votes.service';
 import { CausasResolutionService } from './causas-resolution.service';
+import { CausasPaymentService } from './causas-payment.service';
 import { CreateCausaDto } from './dto/create-causa.dto';
 import { VoteCausaDto } from './dto/vote-causa.dto';
 import { ResolveCausaDto } from './dto/resolve-causa.dto';
@@ -18,12 +20,14 @@ export class CausasController {
     private causasService: CausasService,
     private votesService: CausasVotesService,
     private resolutionService: CausasResolutionService,
+    private paymentService: CausasPaymentService,
   ) {}
 
-  // ── Feed público (sem auth) ────────────────────────────────────
+  // ── Feed público (auth opcional: inclui causas privadas do próprio usuário) ──
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  listPublic(@Query() dto: ListCausasDto) {
-    return this.causasService.listPublic(dto);
+  listPublic(@Query() dto: ListCausasDto, @Request() req: any) {
+    return this.causasService.listPublic(dto, req.user?.id);
   }
 
   @Get('invite/:code')
@@ -111,8 +115,34 @@ export class CausasController {
     return this.causasService.getVotesSummary(id, req.user?.id);
   }
 
+  @Get(':id/participants')
+  getParticipants(@Param('id') id: string, @Request() req: any) {
+    return this.causasService.getParticipants(id, req.user?.id);
+  }
+
   @Get(':id/leaderboard')
   getLeaderboard(@Param('id') id: string) {
     return this.causasService.getLeaderboard(id);
+  }
+
+  // ── Pagamentos (usuário) ──────────────────────────────────────
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/payment/generate')
+  @HttpCode(HttpStatus.OK)
+  generatePayment(@Param('id') id: string, @Request() req: any) {
+    return this.paymentService.getOrCreatePayment(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/payment')
+  getPaymentStatus(@Param('id') id: string, @Request() req: any) {
+    return this.paymentService.getPaymentStatus(id, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/payment/notify-paid')
+  @HttpCode(HttpStatus.OK)
+  notifyPaid(@Param('id') id: string, @Request() req: any) {
+    return this.paymentService.notifyPaid(id, req.user.id);
   }
 }

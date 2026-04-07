@@ -125,6 +125,22 @@ export interface ResolvePayload {
 
 // ─── Keys ────────────────────────────────────────────────────
 
+export type CausaPaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'NOT_REQUESTED';
+
+export interface CausaPayment {
+  id: string;
+  causaId: string;
+  userId: string;
+  amount: number;
+  numCotas: number;
+  paymentStatus: CausaPaymentStatus;
+  pixPayload?: string;
+  pixKey?: string;
+  notifiedAt?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
 export const causaKeys = {
   all: ['causas'] as const,
   feed: (filters: CausasFilters) => ['causas', 'feed', filters] as const,
@@ -132,6 +148,7 @@ export const causaKeys = {
   votes: (id: string) => ['causas', id, 'votes'] as const,
   myVote: (id: string) => ['causas', id, 'my-vote'] as const,
   leaderboard: (id: string) => ['causas', id, 'leaderboard'] as const,
+  payment: (id: string) => ['causas', id, 'payment'] as const,
   my: ['causas', 'my'] as const,
   invite: (code: string) => ['causas', 'invite', code] as const,
 };
@@ -216,6 +233,31 @@ export function useCausaLeaderboard(id: string | null) {
       }>;
     },
     enabled: !!id,
+  });
+}
+
+export interface CausaParticipant {
+  userId: string;
+  user: { id: string; fullName: string; avatar?: string };
+  optionId: string | null;
+  optionLabel: string | null;
+  optionEmoji: string | null;
+  numericValue: number | null;
+  numCotas: number;
+  isCorrect: boolean | null;
+  prizeAmount: number | null;
+  votedAt: string;
+}
+
+export function useCausaParticipants(id: string | null) {
+  return useQuery({
+    queryKey: [...causaKeys.detail(id ?? ''), 'participants'],
+    queryFn: async () => {
+      const { data } = await api.get(`/causas/${id}/participants`);
+      return data as CausaParticipant[];
+    },
+    enabled: !!id,
+    refetchInterval: 30_000,
   });
 }
 
@@ -350,6 +392,134 @@ export function useCancelCausa() {
     },
     onError: (e: any) => {
       toast.error(e?.response?.data?.message ?? 'Erro ao cancelar');
+    },
+  });
+}
+
+// ─── Payment Hooks ────────────────────────────────────────────
+
+export function useCausaPayment(causaId: string | null) {
+  return useQuery<CausaPayment>({
+    queryKey: causaKeys.payment(causaId ?? ''),
+    queryFn: async () => {
+      const { data } = await api.get(`/causas/${causaId}/payment`);
+      return data;
+    },
+    enabled: !!causaId,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useGenerateCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (causaId: string) => {
+      const { data } = await api.post(`/causas/${causaId}/payment/generate`);
+      return data as CausaPayment;
+    },
+    onSuccess: (_, causaId) => {
+      qc.invalidateQueries({ queryKey: causaKeys.payment(causaId) });
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao gerar pagamento');
+    },
+  });
+}
+
+export function useNotifyCausaPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (causaId: string) => {
+      const { data } = await api.post(`/causas/${causaId}/payment/notify-paid`);
+      return data;
+    },
+    onSuccess: (_, causaId) => {
+      qc.invalidateQueries({ queryKey: causaKeys.payment(causaId) });
+      toast.success('Notificação enviada! Aguarde a confirmação do admin.');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao notificar pagamento');
+    },
+  });
+}
+
+// Admin payment hooks
+
+export function useAdminCausaPayments(causaId: string | null) {
+  return useQuery({
+    queryKey: ['admin', 'causas', causaId, 'payments'],
+    queryFn: async () => {
+      const { data } = await api.get(`/admin/causas/${causaId}/payments`);
+      return data as Array<{
+        id: string;
+        userId: string;
+        amount: number;
+        numCotas: number;
+        status: string;
+        notifiedAt?: string;
+        paidAt?: string;
+        createdAt: string;
+        user: { id: string; fullName: string; avatar?: string; email: string; pixKey?: string };
+      }>;
+    },
+    enabled: !!causaId,
+  });
+}
+
+export function useAdminAllCausaPayments(status?: string) {
+  return useQuery({
+    queryKey: ['admin', 'causas', 'payments', 'all', status],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      const { data } = await api.get(`/admin/causas/payments/all?${params}`);
+      return data as Array<{
+        id: string;
+        userId: string;
+        causaId: string;
+        amount: number;
+        numCotas: number;
+        status: string;
+        notifiedAt?: string;
+        paidAt?: string;
+        createdAt: string;
+        user: { id: string; fullName: string; avatar?: string; email: string; pixKey?: string };
+        causa: { id: string; title: string; entryFee: number };
+      }>;
+    },
+  });
+}
+
+export function useConfirmCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, userId }: { causaId: string; userId: string }) => {
+      const { data } = await api.post(`/admin/causas/${causaId}/payments/${userId}/confirm`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'causas'] });
+      toast.success('Pagamento confirmado!');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao confirmar pagamento');
+    },
+  });
+}
+
+export function useRejectCausaPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ causaId, userId }: { causaId: string; userId: string }) => {
+      const { data } = await api.post(`/admin/causas/${causaId}/payments/${userId}/reject`);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'causas'] });
+      toast.success('Pagamento rejeitado');
+    },
+    onError: (e: any) => {
+      toast.error(e?.response?.data?.message ?? 'Erro ao rejeitar pagamento');
     },
   });
 }

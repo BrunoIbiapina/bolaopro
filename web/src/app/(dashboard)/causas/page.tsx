@@ -42,91 +42,126 @@ function CausaCard({ causa }: { causa: Causa }) {
   const deadline = formatDeadline(causa.deadlineAt);
   const isPaid = causa.entryFee > 0;
   const CategoryIcon = CATEGORY_ICONS[causa.category];
-
+  const isResolved = causa.status === 'RESOLVED';
   const topOptions = causa.options.slice(0, 3);
+
+  // Cor de destaque por status
+  const accentClass = isResolved
+    ? 'from-indigo-500/10 to-purple-500/5 border-indigo-500/20 hover:border-indigo-400/40'
+    : causa.status === 'CLOSED'
+    ? 'from-gray-500/5 to-gray-500/5 border-gray-700/40 hover:border-gray-600/60'
+    : 'from-blue-500/5 to-transparent border-gray-200 dark:border-gray-800 hover:border-blue-400/60 dark:hover:border-blue-500/50';
 
   return (
     <div
       onClick={() => router.push(`/causas/${causa.id}`)}
-      className="group bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200"
+      className={`group relative bg-gradient-to-br dark:bg-gray-900/80 rounded-2xl border cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 overflow-hidden ${accentClass}`}
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${cat.color}`}>
-            <CategoryIcon className="w-3 h-3" />
-            {cat.label}
-          </span>
-          <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>
-            {status.label}
-          </span>
-          {isPaid && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-              R$ {causa.entryFee.toFixed(0)}/cota
+      {/* Faixa lateral colorida por categoria */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${cat.color.replace('text-', 'bg-').replace(/bg-\S+\/\d+\s/, '').split(' ')[0]}`} />
+
+      <div className="pl-4 pr-4 pt-4 pb-3">
+        {/* Topo: badges + visibilidade */}
+        <div className="flex items-start justify-between gap-2 mb-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${cat.color}`}>
+              <CategoryIcon className="w-3 h-3" />
+              {cat.label}
+            </span>
+            <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${status.color}`}>
+              {status.label}
+            </span>
+            {isPaid && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <Trophy className="w-2.5 h-2.5" />
+                R$ {causa.entryFee.toFixed(0)}/cota
+              </span>
+            )}
+          </div>
+          {causa.visibility === 'PRIVATE'
+            ? <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
+            : <Globe className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5" />
+          }
+        </div>
+
+        {/* Título */}
+        <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+          {causa.title}
+        </h3>
+
+        {/* Opções com barras */}
+        {(causa.type === 'BINARY' || causa.type === 'CHOICE') && topOptions.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {topOptions.map((opt, i) => {
+              const pct = opt.percentage ?? 0;
+              const colors = ['bg-blue-500', 'bg-violet-500', 'bg-emerald-500', 'bg-orange-500'];
+              const barColor = isResolved && causa.resolvedOptionId === opt.id ? 'bg-green-500' : colors[i % colors.length];
+              return (
+                <div key={opt.id} className="space-y-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex items-center gap-1">
+                      {opt.emoji && <span>{opt.emoji}</span>}
+                      {opt.label}
+                      {isResolved && causa.resolvedOptionId === opt.id && (
+                        <Trophy className="w-3 h-3 text-green-500 ml-0.5" />
+                      )}
+                    </span>
+                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 flex-shrink-0">
+                      {opt.percentage != null ? `${opt.percentage}%` : '—'}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${barColor}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {causa.type === 'NUMERIC' && (
+          <div className="flex items-center gap-2 mb-3 text-xs text-gray-400 dark:text-gray-500">
+            <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 font-medium">
+              # Previsão numérica {causa.numericUnit ? `· ${causa.numericUnit}` : ''}
+            </span>
+          </div>
+        )}
+
+        {/* Rodapé */}
+        <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-800/60">
+          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              <span className="font-medium">{totalVotes}</span>
+              {totalVotes !== 1 ? ' votos' : ' voto'}
+            </span>
+            {isPaid && causa.prizePool > 0 && (
+              <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
+                <Trophy className="w-3 h-3" />
+                R$ {causa.prizePool.toFixed(2)}
+              </span>
+            )}
+          </div>
+
+          {causa.status === 'OPEN' && (
+            <span className="flex items-center gap-1 text-xs font-medium text-orange-500 dark:text-orange-400">
+              <Clock className="w-3 h-3" />
+              {deadline}
             </span>
           )}
-        </div>
-        {causa.visibility === 'PRIVATE'
-          ? <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-          : <Globe className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-        }
-      </div>
-
-      <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-        {causa.title}
-      </h3>
-
-      {(causa.type === 'BINARY' || causa.type === 'CHOICE') && topOptions.length > 0 && (
-        <div className="space-y-1.5 mb-3">
-          {topOptions.map((opt) => (
-            <div key={opt.id} className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                  style={{ width: `${opt.percentage ?? 0}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 w-8 text-right">
-                {opt.percentage != null ? `${opt.percentage}%` : '—'}
-              </span>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[80px]">
-                {opt.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {causa.type === 'NUMERIC' && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
-          Previsão numérica · {causa.numericUnit ?? 'valor'}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {totalVotes} voto{totalVotes !== 1 ? 's' : ''}
-          </span>
-          {isPaid && causa.prizePool > 0 && (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          {isResolved && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
               <Trophy className="w-3 h-3" />
-              R$ {causa.prizePool.toFixed(2)}
+              Resultado disponível
             </span>
           )}
+          {causa.status === 'CLOSED' && (
+            <span className="text-xs text-gray-400">Aguardando resultado</span>
+          )}
         </div>
-        {causa.status === 'OPEN' && (
-          <span className="flex items-center gap-1 text-orange-500">
-            <Clock className="w-3 h-3" />
-            {deadline}
-          </span>
-        )}
-        {causa.status === 'RESOLVED' && (
-          <span className="flex items-center gap-1 text-blue-500">
-            <Trophy className="w-3 h-3" />
-            Resolvida
-          </span>
-        )}
       </div>
     </div>
   );

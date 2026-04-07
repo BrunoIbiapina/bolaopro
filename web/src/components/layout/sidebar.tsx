@@ -33,7 +33,8 @@ const ADMIN_ROUTES = [
   { href: '/admin/teams', label: 'Times', icon: Users },
   { href: '/admin/championships', label: 'Campeonatos', icon: Zap },
   { href: '/admin/matches', label: 'Partidas', icon: BookOpen },
-  { href: '/admin/finance', label: 'Finanças', icon: TrendingUp },
+  { href: '/admin/finance', label: 'Finanças Bolões', icon: TrendingUp },
+  { href: '/admin/causas-payments', label: 'Finanças Causas', icon: Vote },
   { href: '/admin/import-matches', label: 'Importar Partidas', icon: Download },
 ];
 
