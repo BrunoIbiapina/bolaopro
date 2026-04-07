@@ -295,8 +295,8 @@ export default function CausaDetailPage() {
   };
 
   const handleCopyPix = () => {
-    if (paymentData?.pixPayload) {
-      navigator.clipboard.writeText(paymentData.pixPayload);
+    if (paymentData?.pixKey) {
+      navigator.clipboard.writeText(paymentData.pixKey);
       setCopiedPix(true);
       setTimeout(() => setCopiedPix(false), 2500);
     }
@@ -605,15 +605,15 @@ export default function CausaDetailPage() {
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
-                  PIX Copia e Cola
+                  Chave PIX
                 </p>
-                <div className="flex items-start gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 flex-1 break-all font-mono leading-relaxed">
-                    {paymentData.pixPayload}
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5">
+                  <span className="text-sm font-mono font-medium text-gray-800 dark:text-gray-100 flex-1">
+                    {paymentData.pixKey}
                   </span>
                   <button
                     onClick={handleCopyPix}
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all flex-shrink-0 mt-0.5 ${
+                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all flex-shrink-0 ${
                       copiedPix
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                         : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200'
@@ -624,8 +624,8 @@ export default function CausaDetailPage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-1.5">
-                  Chave PIX: <span className="font-medium text-gray-600 dark:text-gray-300">{paymentData.pixKey}</span>
-                  {' · '}Valor: <strong>R$ {paymentData.amount?.toFixed(2)}</strong>
+                  Valor: <strong className="text-gray-600 dark:text-gray-300">R$ {paymentData.amount?.toFixed(2)}</strong>
+                  {(paymentData.numCotas ?? 1) > 1 && <span className="ml-1">({paymentData.numCotas} cotas)</span>}
                 </p>
               </div>
 
