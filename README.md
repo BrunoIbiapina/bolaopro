@@ -2,7 +2,7 @@
 
 ![Bolão Pro: painel do usuário](docs/preview-portfolio.png)
 
-> **In English:** Social betting-pool platform: create pools, make predictions on football matches, follow a live ranking and pay the entry fee via PIX (Brazilian instant payments). NestJS + Prisma + PostgreSQL back end, Next.js + React Query front end, Mercado Pago payments. Live demo: https://bolaopro-eight.vercel.app
+> **In English:** Social betting-pool platform: create pools, make predictions on football matches, follow a live ranking and pay the entry fee via PIX (Brazilian instant payments). NestJS + Prisma + PostgreSQL back end, Next.js + React Query front end, PIX "copy and paste" codes generated in-house (EMV standard), with proof upload and admin approval. Live demo: https://bolaopro-eight.vercel.app
 
 Plataforma social de bolões esportivos — crie bolões, faça palpites em partidas de futebol, processe pagamentos via PIX e acompanhe rankings em tempo real.
 
@@ -23,7 +23,7 @@ bolaopro/
 | Backend | NestJS 10, TypeScript, Prisma 5, PostgreSQL 16 |
 | Frontend | Next.js 14, React 18, React Query, Tailwind CSS |
 | Auth | JWT + Refresh Token + Google OAuth |
-| Pagamentos | PIX (QR Code EMV) via Mercado Pago |
+| Pagamentos | PIX (QR Code EMV) gerado pelo próprio sistema, com comprovante e aprovação do administrador |
 | Deploy | Railway (backend) + Vercel (frontend) |
 | Infra local | Docker (PostgreSQL + Redis) |
 
@@ -116,6 +116,20 @@ server/src/modules/
 ├── football-data/   → Integração football-data.org
 └── audit/           → Log imutável de ações
 ```
+
+## Decisões técnicas
+
+- **PIX gerado pelo próprio sistema.** O código "copia e cola" e o QR Code são montados no padrão EMV do Banco Central, com o CRC16 calculado no back-end (`server/src/common/utils/pix.util.ts`). O pagamento é confirmado por comprovante e aprovação do administrador, sem depender de gateway nem de taxa por transação.
+- **Pontuação e desempate como motores separados.** `scoring.engine.ts` e `tiebreaker.engine.ts` ficam isolados do resto do módulo de ranking, o que deixa a regra de pontos legível e fácil de mudar.
+- **Sessão com token de acesso curto e refresh token salvo no banco**, com senhas em bcrypt. Um refresh token pode ser invalidado sem afetar os demais.
+- **Log de auditoria** (`AuditLog`) com estado anterior e novo, usuário, IP e user agent em cada ação sensível, como pagamentos e resultados.
+- **Jogos reais via football-data.org**, importados para o banco próprio. Tarefas agendadas fecham sozinhas o que venceu.
+- **Monorepo com back e front separados** (`server/` e `web/`): o front fala com a API só por HTTP e pode ser trocado sem tocar no back.
+
+## Limitações conhecidas e próximos passos
+
+- Ainda **não há testes automatizados nem integração contínua**. É o próximo passo, começando pelos motores de pontuação e desempate, que são lógica pura.
+- A confirmação do PIX é manual, feita pelo administrador. A integração com um provedor que avise o pagamento automaticamente fica para uma próxima versão.
 
 ## Deploy
 
