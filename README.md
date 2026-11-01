@@ -2,6 +2,8 @@
 
 ![Bolão Pro: painel do usuário](docs/preview-portfolio.png)
 
+> **In English:** Social betting-pool platform: create pools, make predictions on football matches, follow a live ranking and pay the entry fee via PIX (Brazilian instant payments). NestJS + Prisma + PostgreSQL back end, Next.js + React Query front end, Mercado Pago payments. Live demo: https://bolaopro-eight.vercel.app
+
 Plataforma social de bolões esportivos — crie bolões, faça palpites em partidas de futebol, processe pagamentos via PIX e acompanhe rankings em tempo real.
 
 ## Estrutura do Repositório
