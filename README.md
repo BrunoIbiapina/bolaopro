@@ -121,14 +121,14 @@ server/src/modules/
 
 - **PIX gerado pelo próprio sistema.** O código "copia e cola" e o QR Code são montados no padrão EMV do Banco Central, com o CRC16 calculado no back-end (`server/src/common/utils/pix.util.ts`). O pagamento é confirmado por comprovante e aprovação do administrador, sem depender de gateway nem de taxa por transação.
 - **Pontuação e desempate como motores separados.** `scoring.engine.ts` e `tiebreaker.engine.ts` ficam isolados do resto do módulo de ranking, o que deixa a regra de pontos legível e fácil de mudar.
-- **Sessão com token de acesso curto e refresh token salvo no banco**, com senhas em bcrypt. Um refresh token pode ser invalidado sem afetar os demais.
-- **Log de auditoria** (`AuditLog`) com estado anterior e novo, usuário, IP e user agent em cada ação sensível, como pagamentos e resultados.
-- **Jogos reais via football-data.org**, importados para o banco próprio. Tarefas agendadas fecham sozinhas o que venceu.
+- **Sessão com token de acesso de 15 minutos e refresh token salvo no banco**, com senhas em bcrypt. Um refresh token pode ser invalidado sem afetar os demais.
+- **Jogos reais via football-data.org**, importados para o banco próprio, e as apostas abertas (Causas) fecham sozinhas no prazo por uma tarefa agendada a cada 5 minutos.
 - **Monorepo com back e front separados** (`server/` e `web/`): o front fala com a API só por HTTP e pode ser trocado sem tocar no back.
 
 ## Limitações conhecidas e próximos passos
 
 - Ainda **não há testes automatizados nem integração contínua**. É o próximo passo, começando pelos motores de pontuação e desempate, que são lógica pura.
+- O módulo de auditoria (`AuditLog`, com estado anterior e novo, usuário e IP) está modelado, mas ainda não é chamado pelas ações de pagamento e resultado.
 - A confirmação do PIX é manual, feita pelo administrador. A integração com um provedor que avise o pagamento automaticamente fica para uma próxima versão.
 
 ## Deploy
