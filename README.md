@@ -1,5 +1,7 @@
 # Bolão Pro
 
+![Bolão Pro: painel do usuário](docs/preview-portfolio.png)
+
 Plataforma social de bolões esportivos — crie bolões, faça palpites em partidas de futebol, processe pagamentos via PIX e acompanhe rankings em tempo real.
 
 ## Estrutura do Repositório
