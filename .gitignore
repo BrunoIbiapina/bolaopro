@@ -25,3 +25,6 @@ server/uploads/*
 # Vercel
 .vercel
 .aider*
+
+# Chaves locais nunca vão para o repositório
+.claude/ssh/
